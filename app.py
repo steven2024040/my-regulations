@@ -1,61 +1,82 @@
 import streamlit as st
 import pandas as pd
+import google.generativeai as genai
 import os
 
-# 1. 페이지 기본 설정
-st.set_page_config(page_title="청암대 규정/지침 통합 관리 시스템", layout="wide")
+# 1. AI 설정 (금고에서 키를 가져옴)
+if "GEMINI_API_KEY" in st.secrets:
+    genai.configure(api_key=st.secrets["GEMINI_API_KEY"])
+    model = genai.GenerativeModel('gemini-1.5-flash')
+else:
+    st.error("API 키가 설정되지 않았습니다. Streamlit Secrets를 확인해주세요.")
 
-# 2. 사이드바 - 사용자 모드 선택
-st.sidebar.title("🔐 접속 모드")
-user_mode = st.sidebar.radio("모드를 선택하세요", ["일반 사용자(열람)", "실무자(검토/등록)", "관리자"])
+# 2. 페이지 설정
+st.set_page_config(page_title="청암대 규정 통합 관리 시스템", layout="wide")
+st.title("🏛️ 청암대학교 규정/지침 지능형 시스템")
 
-# 3. 데이터 로드 (함수화)
+# 데이터 로드
 @st.cache_data
 def load_data():
     return pd.read_excel("data.xlsx")
 
 df = load_data()
 
-# --- [A] 일반 사용자 모드 ---
+# 사이드바 모드 선택
+user_mode = st.sidebar.radio("접속 모드", ["일반 사용자(열람)", "실무자(AI 사전 검토)"])
+
+# --- [A] 일반 사용자 모드 (생략 - 기존과 동일) ---
 if user_mode == "일반 사용자(열람)":
-    st.header("🏛️ 규정/지침 통합 검색실")
-    search = st.text_input("찾으시는 규정/지침 키워드를 입력하세요")
-    # (이전의 검색 및 목록 출력 코드 동일...)
+    st.header("🔍 규정/지침 통합 검색")
+    search = st.text_input("검색어 입력")
     st.dataframe(df[df['규정명'].str.contains(search, na=False)] if search else df, use_container_width=True)
 
-# --- [B] 실무자 모드 (AI 사전 검토) ---
-elif user_mode == "실무자(검토/등록)":
-    st.header("🔍 신규 지침 사전 검토실")
-    st.info("새로운 지침을 등록하기 전, 기존 규정과 충돌하는 부분이 있는지 AI가 검토합니다.")
+# --- [B] 실무자 모드 (AI 상충 검토 핵심 기능) ---
+elif user_mode == "실무자(AI 사전 검토)":
+    st.header("🤖 AI 규정 상충 검토 워크스테이션")
+    st.info("신규 지침이 기존 규정과 충돌하는지 AI가 법률 전문가처럼 분석합니다.")
     
-    password = st.text_input("부서 비밀번호를 입력하세요", type="password")
+    col1, col2 = st.columns(2)
     
-    if password == "1234": # 예시 비밀번호
-        col1, col2 = st.columns(2)
+    with col1:
+        st.subheader("1️⃣ 신규 지침(안) 입력")
+        new_doc_content = st.text_area("작성 중인 지침 본문을 입력하세요.", height=400)
         
-        with col1:
-            st.subheader("1️⃣ 신규 지침 입력")
-            new_doc = st.text_area("작성 중인 지침 내용을 붙여넣으세요.", height=300)
-            
-        with col2:
-            st.subheader("2️⃣ 비교 대상 규정 선택")
-            target_reg = st.selectbox("충돌 여부를 확인할 상위 규정을 선택하세요", df["규정명"].tolist())
-            
-        if st.button("🚀 AI 교차 검토 시작"):
-            if new_doc:
-                with st.spinner("AI가 두 규정을 정밀 대조 중입니다..."):
-                    # 여기에 나중에 Gemini AI 연결 코드가 들어갑니다.
-                    st.success("분석 완료!")
-                    st.warning(f"⚠️ 검토 결과: 신규 내용 중 일부가 '{target_reg}'의 제5조와 충돌할 가능성이 있습니다.")
-                    st.markdown("**[AI 권고안]** 지침의 문구를 '총장의 승인을 득한 후'에서 '위원회 심의를 거쳐'로 변경하는 것을 추천합니다.")
-            else:
-                st.error("신규 지침 내용을 입력해주세요.")
+    with col2:
+        st.subheader("2️⃣ 비교 대상 규정 선택")
+        target_reg_name = st.selectbox("충돌이 우려되는 기존 규정을 선택하세요", df["규정명"].tolist())
+        
+        # 선택된 기존 규정 파일 읽기
+        target_file = df[df["규정명"] == target_reg_name]["파일명"].values[0]
+        target_content = ""
+        if pd.notna(target_file):
+            try:
+                with open(f"docs/{target_file}", "r", encoding="utf-8") as f:
+                    target_content = f.read()
+                st.success(f"'{target_reg_name}' 본문을 성공적으로 불러왔습니다.")
+            except:
+                st.error("기존 규정 파일을 읽을 수 없습니다.")
 
-# --- [C] 관리자 모드 ---
-elif user_mode == "관리자":
-    st.header("⚙️ 시스템 관리자 페이지")
-    admin_pw = st.text_input("관리자 암호", type="password")
-    if admin_pw == "admin123":
-        st.write("📊 데이터 업데이트 현황")
-        st.write(df)
-        st.button("전체 지침 현행화 점검")
+    if st.button("🚀 AI 교차 검토 실행"):
+        if new_doc_content and target_content:
+            with st.spinner("AI가 두 문서를 대조하여 상충 조항을 분석 중입니다..."):
+                prompt = f"""
+                당신은 대학의 규정 심의 전문가입니다. 
+                다음 두 문서를 비교하여, '신규 지침(안)'이 '기존 규정'의 내용과 충돌하거나 위배되는 부분이 있는지 분석하세요.
+                
+                [기존 규정: {target_reg_name}]
+                {target_content}
+                
+                [신규 지침(안)]
+                {new_doc_content}
+                
+                분석 결과는 다음 형식을 지켜주세요:
+                1. 상충 여부 (적합/주의/부적합)
+                2. 충돌이 우려되는 구체적인 조항 번호와 내용
+                3. 수정 제안 및 사유
+                """
+                
+                response = model.generate_content(prompt)
+                st.markdown("### 📋 AI 분석 결과 보고서")
+                st.write(response.text)
+        else:
+            st.warning("신규 내용과 비교 대상 규정이 모두 준비되어야 합니다.")
