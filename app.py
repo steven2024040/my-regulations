@@ -2,51 +2,60 @@ import streamlit as st
 import pandas as pd
 import os
 
-st.set_page_config(page_title="청암대학교 규정 통합 관리", layout="wide")
-st.title("🏛️ 청암대학교 규정/지침 통합 검색")
+# 1. 페이지 기본 설정
+st.set_page_config(page_title="청암대 규정/지침 통합 관리 시스템", layout="wide")
 
-try:
-    df = pd.read_excel("data.xlsx")
+# 2. 사이드바 - 사용자 모드 선택
+st.sidebar.title("🔐 접속 모드")
+user_mode = st.sidebar.radio("모드를 선택하세요", ["일반 사용자(열람)", "실무자(검토/등록)", "관리자"])
+
+# 3. 데이터 로드 (함수화)
+@st.cache_data
+def load_data():
+    return pd.read_excel("data.xlsx")
+
+df = load_data()
+
+# --- [A] 일반 사용자 모드 ---
+if user_mode == "일반 사용자(열람)":
+    st.header("🏛️ 규정/지침 통합 검색실")
+    search = st.text_input("찾으시는 규정/지침 키워드를 입력하세요")
+    # (이전의 검색 및 목록 출력 코드 동일...)
+    st.dataframe(df[df['규정명'].str.contains(search, na=False)] if search else df, use_container_width=True)
+
+# --- [B] 실무자 모드 (AI 사전 검토) ---
+elif user_mode == "실무자(검토/등록)":
+    st.header("🔍 신규 지침 사전 검토실")
+    st.info("새로운 지침을 등록하기 전, 기존 규정과 충돌하는 부분이 있는지 AI가 검토합니다.")
     
-    # 레이아웃 나누기 (왼쪽: 목록, 오른쪽: 본문)
-    col1, col2 = st.columns([0.4, 0.6])
-
-    with col1:
-        st.subheader("🔍 규정 목록")
-        search_query = st.text_input("검색어 입력")
+    password = st.text_input("부서 비밀번호를 입력하세요", type="password")
+    
+    if password == "1234": # 예시 비밀번호
+        col1, col2 = st.columns(2)
         
-        filtered_df = df.copy()
-        if search_query:
-            filtered_df = filtered_df[filtered_df["규정명"].str.contains(search_query, na=False)]
-        
-        # 목록을 라디오 버튼 형태로 보여주기 (클릭 시 선택되게 함)
-        selected_reg = st.radio("상세 내용을 보려면 규정을 선택하세요", 
-                                filtered_df["규정명"].tolist(),
-                                label_visibility="collapsed")
-
-    with col2:
-        st.subheader("📄 규정 본문")
-        if selected_reg:
-            # 선택된 규정의 파일명 찾기
-            file_name = df[df["규정명"] == selected_reg]["파일명"].values[0]
+        with col1:
+            st.subheader("1️⃣ 신규 지침 입력")
+            new_doc = st.text_area("작성 중인 지침 내용을 붙여넣으세요.", height=300)
             
-            if pd.isna(file_name):
-                st.warning("이 규정은 아직 본문 파일이 등록되지 않았습니다.")
+        with col2:
+            st.subheader("2️⃣ 비교 대상 규정 선택")
+            target_reg = st.selectbox("충돌 여부를 확인할 상위 규정을 선택하세요", df["규정명"].tolist())
+            
+        if st.button("🚀 AI 교차 검토 시작"):
+            if new_doc:
+                with st.spinner("AI가 두 규정을 정밀 대조 중입니다..."):
+                    # 여기에 나중에 Gemini AI 연결 코드가 들어갑니다.
+                    st.success("분석 완료!")
+                    st.warning(f"⚠️ 검토 결과: 신규 내용 중 일부가 '{target_reg}'의 제5조와 충돌할 가능성이 있습니다.")
+                    st.markdown("**[AI 권고안]** 지침의 문구를 '총장의 승인을 득한 후'에서 '위원회 심의를 거쳐'로 변경하는 것을 추천합니다.")
             else:
-                try:
-                    # GitHub의 docs 폴더에서 텍스트 파일 읽기
-                    file_path = f"docs/{file_name}"
-                    with open(file_path, "r", encoding="utf-8") as f:
-                        content = f.read()
-                    
-                    st.text_area("본문 내용", content, height=500)
-                    
-                    # AI 분석 버튼 (미래의 충돌 검토 기능 자리)
-                    if st.button("🤖 AI에게 이 규정 요약 시키기"):
-                        st.write("AI 기능이 곧 업데이트될 예정입니다!")
-                        
-                except FileNotFoundError:
-                    st.error(f"파일을 찾을 수 없습니다: {file_path}")
+                st.error("신규 지침 내용을 입력해주세요.")
 
-except Exception as e:
-    st.error(f"오류가 발생했습니다: {e}")
+# --- [C] 관리자 모드 ---
+elif user_mode == "관리자":
+    st.header("⚙️ 시스템 관리자 페이지")
+    admin_pw = st.text_input("관리자 암호", type="password")
+    if admin_pw == "admin123":
+        st.write("📊 데이터 업데이트 현황")
+        st.write(df)
+        st.button("전체 지침 현행화 점검")
