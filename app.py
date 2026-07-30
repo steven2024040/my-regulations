@@ -10,7 +10,7 @@ st.set_page_config(
     initial_sidebar_state="expanded",
 )
 
-# 2. 구조화된 그리드 UI를 위한 CSS
+# 2. 스타일링
 st.markdown(
     """
     <style>
@@ -36,23 +36,6 @@ st.markdown(
         padding: 2.5rem 3rem;
     }
 
-    /* 규정 카드 스타일 */
-    .reg-card {
-        background-color: #ffffff;
-        border: 1px solid #e2e8f0;
-        border-radius: 10px;
-        padding: 16px;
-        margin-bottom: 12px;
-        box-shadow: 0 1px 3px rgba(0,0,0,0.02);
-        transition: all 0.2s ease;
-    }
-    .reg-card:hover {
-        border-color: #3b82f6;
-        box-shadow: 0 4px 6px -1px rgba(59, 130, 246, 0.1);
-        transform: translateY(-2px);
-    }
-
-    /* 문서 뷰어 박스 */
     .viewer-box {
         background-color: #ffffff;
         border: 1px solid #e2e8f0;
@@ -71,13 +54,10 @@ st.markdown(
 @st.cache_data
 def get_cheongam_regulations():
   raw_data = [
-      # 제1편 학교법인
       ["제 1 편 학교법인", "학교법인 청암학원 정관", "1-1.txt"],
       ["제 1 편 학교법인", "청암대학교 산학협력단 법인정관", "1-2.txt"],
-      # 제2편 학칙
       ["제 2 편 학 칙", "학 칙", "2-1.txt"],
       ["제 2 편 학 칙", "학사내규", "2-2.txt"],
-      # 제3편 기획 및 교원인사
       ["제 3 편 기획 및 교원인사", "감사 규정", "3-1.txt"],
       ["제 3 편 기획 및 교원인사", "교원성과급 규정", "3-2.txt"],
       ["제 3 편 기획 및 교원인사", "교원연봉제 운영 규정", "3-3.txt"],
@@ -114,7 +94,6 @@ def get_cheongam_regulations():
       ["제 3 편 기획 및 교원인사", "전임교원 특별채용 규정", "3-17.txt"],
       ["제 3 편 기획 및 교원인사", "강사 인사 규정", "3-18.txt"],
       ["제 3 편 기획 및 교원인사", "강사 신규임용 시행 규칙", "3-19.txt"],
-      # 제4편 산학협력
       [
           "제 4 편 산학협력",
           "국가연구개발사업 보안업무관리 규정",
@@ -134,7 +113,6 @@ def get_cheongam_regulations():
       ["제 4 편 산학협력", "학생연구자 지원 규정", "4-13.txt"],
       ["제 4 편 산학협력", "혁신지원사업 운영 규정", "4-14.txt"],
       ["제 4 편 산학협력", "지역혁신중심 대학지원(RISE)사업 운영 규정", "4-15.txt"],
-      # 제5편 학사
       ["제 5 편 학 사", "강사료 지급 규정", "5-1-1.txt"],
       [
           "제 5 편 학 사",
@@ -152,7 +130,6 @@ def get_cheongam_regulations():
       ["제 5 편 학 사", "장학 규정 시행 규칙", "5-2-5-1.txt"],
       ["제 5 편 학 사", "학생 상벌 규정", "5-2-6.txt"],
       ["제 5 편 학 사", "연구윤리 규정", "5-1-16.txt"],
-      # 제6편 일반 행정
       ["제 6 편 일반 행정", "교직원 복무 규정", "6-1.txt"],
       ["제 6 편 일반 행정", "교직원 포상 규정", "6-2.txt"],
       ["제 6 편 일반 행정", "당직근무 규정", "6-3.txt"],
@@ -163,7 +140,6 @@ def get_cheongam_regulations():
       ["제 6 편 일반 행정", "예산 관리 규정", "6-23.txt"],
       ["제 6 편 일반 행정", "교직원 보수 규정", "6-24.txt"],
       ["제 6 편 일반 행정", "직제 규정", "6-37.txt"],
-      # 제7편 부속/부설기관
       ["제 7 편 부속/부설기관", "교수·학습지원센터 운영 규정", "7-1.txt"],
       ["제 7 편 부속/부설기관", "국제교류원 운영 규정", "7-2.txt"],
       ["제 7 편 부속/부설기관", "도서관 규정", "7-3.txt"],
@@ -173,7 +149,6 @@ def get_cheongam_regulations():
       ["제 7 편 부속/부설기관", "청암대학교 인권센터 규정", "7-23.txt"],
       ["제 7 편 부속/부설기관", "IR센터 운영 규정", "7-25.txt"],
       ["제 7 편 부속/부설기관", "AI·원격교육지원센터 운영 규정", "7-26.txt"],
-      # 제8편 위원회
       ["제 8 편 위원회", "교무위원회 규정", "8-1.txt"],
       ["제 8 편 위원회", "교원양성위원회 규정", "8-3.txt"],
       ["제 8 편 위원회", "교육과정편성 및 심의위원회 규정", "8-4.txt"],
@@ -208,13 +183,13 @@ with st.sidebar:
   if st.sidebar.button(
       "📚 1·2번. 규정 구조화 조회 및 검색",
       use_container_width=True,
-      key="m1",
+      key="m1_btn",
   ):
     st.session_state["menu"] = "📚 전체 규정 조회 및 구조화 뷰"
     st.rerun()
 
   if st.sidebar.button(
-      "🤖 3번. AI 규정 충돌 검토", use_container_width=True, key="m2"
+      "🤖 3번. AI 규정 충돌 검토", use_container_width=True, key="m2_btn"
   ):
     st.session_state["menu"] = "🤖 AI 규정 충돌 검토"
     st.rerun()
@@ -234,14 +209,13 @@ if current_menu == "📚 전체 규정 조회 및 구조화 뷰":
       unsafe_allow_html=True,
   )
 
-  # 실시간 검색 바
   search_keyword = st.text_input(
       "검색",
       placeholder="🔍 전체 규정 중 키워드 검색 (예: 인사, 장학, 위원회, 강사...)",
       label_visibility="collapsed",
+      key="main_search_input",
   )
 
-  # 검색어가 있는 경우: 검색 결과 중심의 그리드 뷰 출력
   if search_keyword.strip():
     st.markdown(
         f"<p style='font-weight:600; color:#2563eb; margin:10px 0;'>🔍 '{search_keyword}'"
@@ -264,7 +238,7 @@ if current_menu == "📚 전체 규정 조회 및 구조화 뷰":
         for _, row in search_df.iterrows():
           if st.button(
               f"[{row['편']}] {row['규정명']}",
-              key=f"srch_{row['파일명']}",
+              key=f"srch_btn_{row['파일명']}",
               use_container_width=True,
           ):
             st.session_state["selected_reg"] = row["규정명"]
@@ -282,17 +256,17 @@ if current_menu == "📚 전체 규정 조회 및 구조화 뷰":
               unsafe_allow_html=True,
           )
           st.text_area(
-              "CONTENT",
+              "CONTENT_SRCH",
               f"[{st.session_state['selected_reg']}] 원문 내용...\n\n- 목적 및 적용 범위 조문",
               height=550,
               label_visibility="collapsed",
+              key="textarea_srch",
           )
         else:
           st.write("목록에서 규정을 선택하세요.")
         st.markdown("</div>", unsafe_allow_html=True)
 
   else:
-    # 검색어가 없을 때: 8개 편(Part)을 탭(Tab) 구조로 완벽히 구조화
     parts = list(df["편"].unique())
     part_tabs = st.tabs(parts)
 
@@ -310,7 +284,7 @@ if current_menu == "📚 전체 규정 조회 및 구조화 뷰":
               unsafe_allow_html=True,
           )
           st.markdown(
-              f"<b style='color:#1e293b; font-size:1rem;'>📁 {part_name}목록"
+              f"<b style='color:#1e293b; font-size:1rem;'>📁 {part_name} 목록"
               f" ({len(part_df)}건)</b><hr style='margin:10px 0;'>",
               unsafe_allow_html=True,
           )
@@ -324,7 +298,9 @@ if current_menu == "📚 전체 규정 조회 및 구조화 뷰":
             )
 
             if st.button(
-                btn_label, key=f"tab_reg_{row['파일명']}", use_container_width=True
+                btn_label,
+                key=f"tab_btn_{idx}_{row['파일명']}",
+                use_container_width=True,
             ):
               st.session_state["selected_reg"] = row["규정명"]
               st.session_state["selected_file"] = row["파일명"]
@@ -348,10 +324,11 @@ if current_menu == "📚 전체 규정 조회 및 구조화 뷰":
 
             sample_content = f"[{st.session_state['selected_reg']}]\n\n본 문서는 청암대학교 공식 규정집 원문입니다.\n\n- 제1조(목적) 이 규정은 청암대학교의 효율적인 행정 운영과 기준 확립을 목적으로 한다.\n- 제2조(적용범위) 교내 각 부서 및 교직원에게 적용한다."
             st.text_area(
-                "CONTENT",
+                "CONTENT_TAB",
                 sample_content,
                 height=550,
                 label_visibility="collapsed",
+                key=f"textarea_tab_{idx}",
             )
           else:
             st.markdown(
@@ -389,9 +366,10 @@ elif current_menu == "🤖 AI 규정 충돌 검토":
       "개정(안) 또는 신규 지침 초안 입력",
       height=300,
       placeholder="예: 교무처에서 작성한 '강사 복무 및 강의 지원 지침' 중 휴강 및 보강 관련 조항...",
+      key="ai_draft_textarea",
   )
 
-  if st.button("⚡ 기존 전체 규정과 충돌 여부 검토 실행", type="primary"):
+  if st.button("⚡ 기존 전체 규정과 충돌 여부 검토 실행", type="primary", key="ai_run_btn"):
     if draft_input.strip():
       with st.spinner(
           "청암대학교 1~8편 전체 규정 데이터와 대조하여 상충 여부를 분석 중입니다..."
