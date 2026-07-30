@@ -1,3 +1,4 @@
+import glob
 import os
 import pandas as pd
 import streamlit as st
@@ -57,23 +58,32 @@ st.markdown(
 )
 
 
-# 3. 규정 데이터 및 PDF 원문 로드 함수 (유연성 강화)
+# 3. PDF 자동 탐색 및 로드 함수
 @st.cache_data
 def load_regulations():
-  pdf_filename = "청암대학교 규정집(20260709).pdf"
   full_text = ""
   pages_text = []
+  found_files = glob.glob("*.pdf")  # 현재 폴더의 모든 PDF 자동 검색
 
-  if PDF_AVAILABLE and os.path.exists(pdf_filename):
+  pdf_path = None
+  if found_files:
+    pdf_path = found_files[0]  # 첫 번째로 발견된 PDF 사용
+
+  if PDF_AVAILABLE and pdf_path:
     try:
-      reader = pypdf.PdfReader(pdf_filename)
+      reader = pypdf.PdfReader(pdf_path)
       for idx, page in enumerate(reader.pages):
         t = page.extract_text()
         if t:
           full_text += f"\n--- [PDF {idx+1}페이지] ---\n" + t
           pages_text.append((idx + 1, t))
     except Exception as e:
-      full_text = f"PDF 읽기 오류 발생: {str(e)}"
+      full_text = f"PDF 읽기 오류: {str(e)}"
+  else:
+    full_text = (
+        "PDF 파일을 찾을 수 없습니다. GitHub 저장소에 PDF 파일이 업로드되었는지"
+        " 확인하세요."
+    )
 
   # 청암대학교 전체 규정 목차 구조
   reg_list = [
@@ -175,19 +185,16 @@ def load_regulations():
     title = row["규정명"]
     matched_text = ""
 
-    # 핵심 키워드 추출 (예: '학교법인 청암학원 정관' -> '정관' 또는 '청암학원')
     keywords = [kw for kw in title.replace("·", " ").split() if len(kw) > 1]
     if not keywords:
       keywords = [title]
 
-    # 페이지별 탐색
     for p_num, p_text in pages_text:
-      # 제목 전체나 핵심 키워드가 포함되어 있는지 확인
       if title in p_text or any(kw in p_text for kw in keywords):
         matched_text += (
             f"📍 [참조 페이지: {p_num}페이지]\n" + p_text[:3000] + "\n\n"
         )
-        break  # 첫 번째 매칭 페이지만 추출
+        break
 
     if matched_text.strip():
       contents.append(
@@ -195,12 +202,11 @@ def load_regulations():
           + matched_text
       )
     else:
-      # 만약 특정 매칭을 못 찾았을 경우, PDF 전체 텍스트의 앞부분을 기본 제공하여 빈 화면 방지
+      # 매칭이 안 되어도 PDF 전체 내용 일부를 보여주어 빈 화면 방지
       contents.append(
-          f"=== [{title}] (문서코드: {row['코드']}) 원문 데이터 ==\n\n[기본"
-          f" 안내] 업로드하신 PDF 문서에서 '{title}' 항목의 직접 매칭을 찾지"
-          f" 못했으나, 첨부된 PDF 전체 내용 중 일부를 아래에"
-          f" 표시합니다.\n\n{full_text[:3000]}"
+          f"=== [{title}] (문서코드: {row['코드']}) 원문 데이터 ===\n\n[안내]"
+          f" '{title}'의 직접 매칭 텍스트를 찾지 못했습니다. 아래는 업로드된"
+          f" PDF 전체 텍스트 일부입니다:\n\n{full_text[:3000]}"
       )
 
   df["원문"] = contents
