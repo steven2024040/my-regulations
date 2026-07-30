@@ -58,21 +58,21 @@ st.markdown(
 )
 
 
-# 3. 규정 데이터 및 PDF 로드 함수 (유연한 텍스트 매칭 적용)
+# 3. 규정 데이터 및 PDF 원문 로드 함수
 @st.cache_data
 def load_regulations():
   pdf_filename = "청암대학교 규정집(20260709).pdf"
   full_text = ""
-  pages_content = []
+  pages_text = []
 
   if PDF_AVAILABLE and os.path.exists(pdf_filename):
     try:
       reader = pypdf.PdfReader(pdf_filename)
       for idx, page in enumerate(reader.pages):
-        text = page.extract_text()
-        if text:
-          full_text += text + "\n"
-          pages_content.append((idx + 1, text))
+        t = page.extract_text()
+        if t:
+          full_text += t + "\n"
+          pages_text.append((idx + 1, t))
     except Exception as e:
       full_text = ""
 
@@ -174,24 +174,40 @@ def load_regulations():
   contents = []
   for _, row in df.iterrows():
     title = row["규정명"]
-    found_text = ""
+    extracted_chunk = ""
 
-    # PDF 내에서 해당 규정명 또는 코드가 포함된 페이지 탐색
+    # PDF 내에서 해당 규정명 검색
     if full_text:
-      for page_num, page_text in pages_content:
-        if title in page_text or row["코드"] in page_text:
-          found_text += (
-              f"--- [PDF {page_num}페이지 발췌] ---\n" + page_text[:1200] + "\n\n"
-          )
-          break
+      # 1순위: 규정명으로 직접 찾기
+      if title in full_text:
+        idx = full_text.find(title)
+        extracted_chunk = full_text[idx : idx + 2500]  # 규정 본문 2500자 추출
+      else:
+        # 2순위: 페이지별로 키워드 검색
+        for p_num, p_text in pages_text:
+          if any(
+              keyword in p_text
+              for keyword in title.split()
+              if len(keyword) > 1
+          ):
+            extracted_chunk = (
+                f"[참조 페이지: {p_num}페이지 주변]\n\n" + p_text[:2500]
+            )
+            break
 
-    if found_text:
+    if extracted_chunk.strip():
       contents.append(
-          f"[{title}] (문서코드: {row['코드']})\n\n" + found_text
+          f"=== [{title}] 공식 원문 내용 ===\n\n" + extracted_chunk
       )
     else:
+      # 만약 추출되지 않을 경우 전체 PDF 내용 일부 또는 안내 메시지
       contents.append(
-          f"[{title}] (문서코드: {row['코드']})\n\n업로드된 공식 규정집 PDF 내에서 해당 명칭을 직접 매칭하지 못했습니다. (추후 AI 검색 엔진을 통해 전체 본문에서 정밀 검색되도록 고도화될 예정입니다.)"
+          f"=== [{title}] (문서코드: {row['코드']}) ===\n\n[안내] 업로드하신"
+          " PDF 파일 내에서 해당 규정명의 정확한 텍스트 매칭을 찾지"
+          " 못했습니다.\n하지만 첨부된 전체 PDF 파일('청암대학교"
+          " 규정집(20260709).pdf') 속에는 포함되어 있습니다.\n\n(Tip: 상단"
+          " 검색창에서 키워드를 검색하시면 PDF 전체 텍스트에서 관련 내용을"
+          " 찾으실 수 있습니다.)"
       )
 
   df["원문"] = contents
@@ -260,6 +276,7 @@ if current_menu == "📚 전체 규정 조회 및 구조화 뷰":
     search_df = df[
         df["규정명"].str.contains(search_keyword, na=False)
         | df["편"].str.contains(search_keyword, na=False)
+        | df["원문"].str.contains(search_keyword, na=False)
     ]
 
     if search_df.empty:
@@ -356,7 +373,7 @@ if current_menu == "📚 전체 규정 조회 및 구조화 뷰":
                         <div style='border-bottom: 2px solid #f1f5f9; padding-bottom:15px; margin-bottom:20px;'>
                             <span style='background:#eff6ff; color:#1d4ed8; padding:4px 10px; border-radius:15px; font-size:0.75rem; font-weight:600;'>공식 규정 원문</span>
                             <h3 style='margin:10px 0 0 0; color:#0f172a; font-size:1.3rem;'>{st.session_state['selected_reg']}</h3>
-                            <p style='color:#64748b; font-size:0.8rem; margin:4px 0 0 0;'>문서 코드: {st.session_state.get('selected_code', '')}</p>
+                            <p style='color:#64748b; font-size:0.85rem; margin:4px 0 0 0;'>문서 코드: {st.session_state.get('selected_code', '')}</p>
                         </div>
                     """,
                 unsafe_allow_html=True,
@@ -374,7 +391,7 @@ if current_menu == "📚 전체 규정 조회 및 구조화 뷰":
                 """
                         <div style='height: 600px; display:flex; flex-direction:column; align-items:center; justify-content:center; color:#94a3b8; text-align:center;'>
                             <p style='font-size:1.05rem; font-weight:600; color:#334155; margin:0;'>해당 편의 규정을 선택해 주세요.</p>
-                            <p style='font-size:0.85rem; margin-top:6px;'>선택한 규정의 원문 내용이 이 곳에 표시됩니다.</p>
+                            <p style='font-size:0.85rem; margin-top:6px;'>선택한 규정의 실제 PDF 원문 내용이 이 곳에 표시됩니다.</p>
                         </div>
                     """,
                 unsafe_allow_html=True,
