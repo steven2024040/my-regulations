@@ -2,7 +2,6 @@ import os
 import pandas as pd
 import streamlit as st
 
-# pypdf 안전 임포트
 try:
   import pypdf
 
@@ -58,7 +57,7 @@ st.markdown(
 )
 
 
-# 3. 규정 데이터 및 PDF 원문 로드 함수
+# 3. 규정 데이터 및 PDF 원문 로드 함수 (유연성 강화)
 @st.cache_data
 def load_regulations():
   pdf_filename = "청암대학교 규정집(20260709).pdf"
@@ -71,10 +70,10 @@ def load_regulations():
       for idx, page in enumerate(reader.pages):
         t = page.extract_text()
         if t:
-          full_text += t + "\n"
+          full_text += f"\n--- [PDF {idx+1}페이지] ---\n" + t
           pages_text.append((idx + 1, t))
     except Exception as e:
-      full_text = ""
+      full_text = f"PDF 읽기 오류 발생: {str(e)}"
 
   # 청암대학교 전체 규정 목차 구조
   reg_list = [
@@ -174,40 +173,34 @@ def load_regulations():
   contents = []
   for _, row in df.iterrows():
     title = row["규정명"]
-    extracted_chunk = ""
+    matched_text = ""
 
-    # PDF 내에서 해당 규정명 검색
-    if full_text:
-      # 1순위: 규정명으로 직접 찾기
-      if title in full_text:
-        idx = full_text.find(title)
-        extracted_chunk = full_text[idx : idx + 2500]  # 규정 본문 2500자 추출
-      else:
-        # 2순위: 페이지별로 키워드 검색
-        for p_num, p_text in pages_text:
-          if any(
-              keyword in p_text
-              for keyword in title.split()
-              if len(keyword) > 1
-          ):
-            extracted_chunk = (
-                f"[참조 페이지: {p_num}페이지 주변]\n\n" + p_text[:2500]
-            )
-            break
+    # 핵심 키워드 추출 (예: '학교법인 청암학원 정관' -> '정관' 또는 '청암학원')
+    keywords = [kw for kw in title.replace("·", " ").split() if len(kw) > 1]
+    if not keywords:
+      keywords = [title]
 
-    if extracted_chunk.strip():
+    # 페이지별 탐색
+    for p_num, p_text in pages_text:
+      # 제목 전체나 핵심 키워드가 포함되어 있는지 확인
+      if title in p_text or any(kw in p_text for kw in keywords):
+        matched_text += (
+            f"📍 [참조 페이지: {p_num}페이지]\n" + p_text[:3000] + "\n\n"
+        )
+        break  # 첫 번째 매칭 페이지만 추출
+
+    if matched_text.strip():
       contents.append(
-          f"=== [{title}] 공식 원문 내용 ===\n\n" + extracted_chunk
+          f"=== [{title}] (문서코드: {row['코드']}) 공식 원문 ===\n\n"
+          + matched_text
       )
     else:
-      # 만약 추출되지 않을 경우 전체 PDF 내용 일부 또는 안내 메시지
+      # 만약 특정 매칭을 못 찾았을 경우, PDF 전체 텍스트의 앞부분을 기본 제공하여 빈 화면 방지
       contents.append(
-          f"=== [{title}] (문서코드: {row['코드']}) ===\n\n[안내] 업로드하신"
-          " PDF 파일 내에서 해당 규정명의 정확한 텍스트 매칭을 찾지"
-          " 못했습니다.\n하지만 첨부된 전체 PDF 파일('청암대학교"
-          " 규정집(20260709).pdf') 속에는 포함되어 있습니다.\n\n(Tip: 상단"
-          " 검색창에서 키워드를 검색하시면 PDF 전체 텍스트에서 관련 내용을"
-          " 찾으실 수 있습니다.)"
+          f"=== [{title}] (문서코드: {row['코드']}) 원문 데이터 ==\n\n[기본"
+          f" 안내] 업로드하신 PDF 문서에서 '{title}' 항목의 직접 매칭을 찾지"
+          f" 못했으나, 첨부된 PDF 전체 내용 중 일부를 아래에"
+          f" 표시합니다.\n\n{full_text[:3000]}"
       )
 
   df["원문"] = contents
