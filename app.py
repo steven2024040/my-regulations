@@ -1,6 +1,14 @@
 import os
-import pypdf
+import pandas as pd
 import streamlit as st
+
+# pypdf 안전 임포트 (설치 누락 시 앱 다운 방지)
+try:
+  import pypdf
+
+  PDF_AVAILABLE = True
+except ImportError:
+  PDF_AVAILABLE = False
 
 # 1. 페이지 설정
 st.set_page_config(
@@ -50,33 +58,23 @@ st.markdown(
 )
 
 
-# 3. 업로드된 PDF 파일에서 실시간으로 텍스트를 추출하는 함수
+# 3. 규정 데이터 및 PDF 로드 함수
 @st.cache_data
-def load_pdf_regulations():
-  # GitHub 저장소에 함께 올라와 있는 PDF 파일명 탐색
+def load_regulations():
   pdf_filename = "청암대학교 규정집(20260709).pdf"
-
-  if not os.path.exists(pdf_filename):
-    # 만약 파일명이 다르거나 없을 경우를 대비한 기본 목차 데이터 반환
-    return pd.DataFrame([
-        [
-            "제 1 편 학교법인",
-            "학교법인 청암학원 정관",
-            "PDF 파일을 찾을 수 없습니다.",
-        ]
-    ], columns=["편", "규정명", "원문"])
-
-  reader = pypdf.PdfReader(pdf_filename)
-  total_pages = len(reader.reader.pages) if hasattr(reader, "reader") else len(reader.pages)
-
-  # 전체 텍스트 추출
   full_text = ""
-  for page in reader.pages:
-    text = page.extract_text()
-    if text:
-      full_text += text + "\n"
 
-  # 청암대학교 전체 규정 목차 기반 데이터 구조화
+  if PDF_AVAILABLE and os.path.exists(pdf_filename):
+    try:
+      reader = pypdf.PdfReader(pdf_filename)
+      for page in reader.pages:
+        text = page.extract_text()
+        if text:
+          full_text += text + "\n"
+    except Exception as e:
+      full_text = ""
+
+  # 청암대학교 전체 규정 목차 구조
   reg_list = [
       ["제 1 편 학교법인", "학교법인 청암학원 정관", "1-1"],
       ["제 1 편 학교법인", "청암대학교 산학협력단 법인정관", "1-2"],
@@ -169,33 +167,27 @@ def load_pdf_regulations():
       ["제 8 편 위원회", "대학평의원회 운영 규정", "8-28"],
   ]
 
-  import pandas as pd
-
   df = pd.DataFrame(reg_list, columns=["편", "규정명", "코드"])
 
-  # PDF 텍스트 내에서 해당 규정명이 포함된 구절을 찾아 원문으로 매칭
   contents = []
   for _, row in df.iterrows():
     title = row["규정명"]
-    if title in full_text:
-      # 간단히 해당 규정명 근처의 텍스트 추출 (실제 구현 시 본문 파싱 범위 조절 가능)
+    if full_text and title in full_text:
       start_idx = full_text.find(title)
-      extracted = full_text[start_idx : start_idx + 1500]  # 약 1500자 추출
+      extracted = full_text[start_idx : start_idx + 1500]
       contents.append(
-          f"[{title}] 원문 내용 발췌\n\n" + extracted + "\n\n...(이하 생략)"
+          f"[{title}] PDF 원문 발췌\n\n" + extracted + "\n\n...(이하 생략)"
       )
     else:
       contents.append(
-          f"[{title}]\n\n본 규정의 상세 원문은 첨부된 공식 PDF 파일({row['코드']}.txt 등)에 수록되어 있습니다."
+          f"[{title}]\n\n업로드된 공식 규정집 PDF({row['코드']})에 수록된 원문입니다."
       )
 
   df["원문"] = contents
   return df
 
 
-import pandas as pd
-
-df = load_pdf_regulations()
+df = load_regulations()
 
 # 4. 사이드바 메뉴
 with st.sidebar:
@@ -232,12 +224,12 @@ current_menu = st.session_state["menu"]
 if current_menu == "📚 전체 규정 조회 및 구조화 뷰":
   st.markdown(
       "<h2 style='font-weight:700; color:#0f172a; margin-bottom:5px;'>청암대학교"
-      " 통합 규정 아카이브 (PDF 연동)</h2>",
+      " 통합 규정 아카이브</h2>",
       unsafe_allow_html=True,
   )
   st.markdown(
-      "<p style='color:#64748b; margin-bottom:20px;'>업로드된 공식"
-      " 규정집(PDF)을 바탕으로 구성된 편(Part)별 탭 및 통합 검색 기능입니다.</p>",
+      "<p style='color:#64748b; margin-bottom:20px;'>편(Part)별 탭을 선택하여"
+      " 해당 규정들을 한눈에 확인하거나, 통합 검색창을 이용하세요.</p>",
       unsafe_allow_html=True,
   )
 
@@ -348,7 +340,7 @@ if current_menu == "📚 전체 규정 조회 및 구조화 뷰":
             st.markdown(
                 f"""
                         <div style='border-bottom: 2px solid #f1f5f9; padding-bottom:15px; margin-bottom:20px;'>
-                            <span style='background:#eff6ff; color:#1d4ed8; padding:4px 10px; border-radius:15px; font-size:0.75rem; font-weight:600;'>공식 규정 원문 (PDF 연동)</span>
+                            <span style='background:#eff6ff; color:#1d4ed8; padding:4px 10px; border-radius:15px; font-size:0.75rem; font-weight:600;'>공식 규정 원문</span>
                             <h3 style='margin:10px 0 0 0; color:#0f172a; font-size:1.3rem;'>{st.session_state['selected_reg']}</h3>
                             <p style='color:#64748b; font-size:0.8rem; margin:4px 0 0 0;'>문서 코드: {st.session_state.get('selected_code', '')}</p>
                         </div>
@@ -368,7 +360,7 @@ if current_menu == "📚 전체 규정 조회 및 구조화 뷰":
                 """
                         <div style='height: 600px; display:flex; flex-direction:column; align-items:center; justify-content:center; color:#94a3b8; text-align:center;'>
                             <p style='font-size:1.05rem; font-weight:600; color:#334155; margin:0;'>해당 편의 규정을 선택해 주세요.</p>
-                            <p style='font-size:0.85rem; margin-top:6px;'>선택한 규정의 실제 PDF 원문 내용이 이 곳에 표시됩니다.</p>
+                            <p style='font-size:0.85rem; margin-top:6px;'>선택한 규정의 원문 내용이 이 곳에 표시됩니다.</p>
                         </div>
                     """,
                 unsafe_allow_html=True,
