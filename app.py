@@ -58,31 +58,40 @@ st.markdown(
 )
 
 
-# 3. PDF 자동 탐색 및 로드 함수
+# 3. 안전한 PDF 로드 함수
 @st.cache_data
 def load_regulations():
   full_text = ""
   pages_text = []
-  found_files = glob.glob("*.pdf")  # 현재 폴더의 모든 PDF 자동 검색
 
-  pdf_path = None
-  if found_files:
-    pdf_path = found_files[0]  # 첫 번째로 발견된 PDF 사용
+  # 폴더 내 모든 PDF 탐색
+  found_files = glob.glob("*.pdf")
+  pdf_path = found_files[0] if found_files else None
+
+  pdf_status = "정상 로드됨"
 
   if PDF_AVAILABLE and pdf_path:
     try:
-      reader = pypdf.PdfReader(pdf_path)
-      for idx, page in enumerate(reader.pages):
-        t = page.extract_text()
-        if t:
-          full_text += f"\n--- [PDF {idx+1}페이지] ---\n" + t
-          pages_text.append((idx + 1, t))
+      # 파일 크기 체크 (너무 작으면 git pointer일 가능성 높음)
+      file_size = os.path.getsize(pdf_path)
+      if file_size < 1000:
+        pdf_status = (
+            "⚠️ 업로드된 PDF 파일이 비정상적으로 작습니다(Git 포인터"
+            " 파일 의심). GitHub에 PDF를 다시 업로드해 주세요."
+        )
+      else:
+        reader = pypdf.PdfReader(pdf_path)
+        for idx, page in enumerate(reader.pages):
+          t = page.extract_text()
+          if t:
+            full_text += f"\n--- [PDF {idx+1}페이지] ---\n" + t
+            pages_text.append((idx + 1, t))
     except Exception as e:
-      full_text = f"PDF 읽기 오류: {str(e)}"
+      pdf_status = f"⚠️ PDF 파싱 오류 발생: {str(e)}"
   else:
-    full_text = (
-        "PDF 파일을 찾을 수 없습니다. GitHub 저장소에 PDF 파일이 업로드되었는지"
-        " 확인하세요."
+    pdf_status = (
+        "⚠️ GitHub 저장소에 PDF 파일이 발견되지 않았습니다. PDF 파일을"
+        " 업로드해 주세요."
     )
 
   # 청암대학교 전체 규정 목차 구조
@@ -202,11 +211,11 @@ def load_regulations():
           + matched_text
       )
     else:
-      # 매칭이 안 되어도 PDF 전체 내용 일부를 보여주어 빈 화면 방지
       contents.append(
-          f"=== [{title}] (문서코드: {row['코드']}) 원문 데이터 ===\n\n[안내]"
-          f" '{title}'의 직접 매칭 텍스트를 찾지 못했습니다. 아래는 업로드된"
-          f" PDF 전체 텍스트 일부입니다:\n\n{full_text[:3000]}"
+          f"=== [{title}] (문서코드: {row['코드']}) 원문 데이터 ===\n\n[PDF"
+          f" 상태: {pdf_status}]\n\n'{title}'에 대한 개별 매칭을 찾지"
+          f" 못했습니다. PDF가 정상 로드되었다면 전체 텍스트 내에서 검색이"
+          f" 가능합니다."
       )
 
   df["원문"] = contents
