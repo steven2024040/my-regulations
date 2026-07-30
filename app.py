@@ -10,7 +10,7 @@ st.set_page_config(
     initial_sidebar_state="expanded",
 )
 
-# 2. 확실한 가독성과 모던 웹 UI를 위한 CSS
+# 2. 확실한 가독성과 모던 웹 UI를 위한 CSS (사이드바 가독성 문제 완전 해결)
 st.markdown(
     """
     <style>
@@ -22,14 +22,14 @@ st.markdown(
         color: #0f172a;
     }
 
-    /* 사이드바 디자인: 깔끔한 화이트/라이트 그레이 톤 또는 세련된 다크 톤 */
+    /* 사이드바 디자인: 깔끔하고 세련된 라이트 모던 톤 (글씨 뭉침 방지) */
     [data-testid="stSidebar"] {
-        background-color: #0f172a !important;
-        border-right: 1px solid #1e293b;
+        background-color: #ffffff !important;
+        border-right: 1px solid #e2e8f0;
     }
     
     [data-testid="stSidebar"] * {
-        color: #f8fafc !important;
+        color: #1e293b !important;
     }
 
     [data-testid="stSidebarNav"] {display: none;}
@@ -54,7 +54,7 @@ st.markdown(
         border-left: 3px solid #2563eb;
     }
 
-    /* 규정 목록 버튼 스타일 */
+    /* 메인 콘텐츠 영역 버튼 스타일 */
     .stButton > button {
         width: 100%;
         text-align: left;
@@ -215,13 +215,13 @@ def get_cheongam_regulations():
 
 df = get_cheongam_regulations()
 
-# 4. 사이드바 구성 (가독성 확실한 버튼형 내비게이션으로 변경)
+# 4. 사이드바 구성 (가독성 100% 보장하는 모던 라이트 톤 내비게이션)
 with st.sidebar:
   st.markdown(
       """
-        <div style='padding: 20px 10px; border-bottom: 1px solid #1e293b; margin-bottom: 20px;'>
-            <h2 style='color:white; margin:0; font-size:1.1rem; font-weight:700;'>🏛️ CHEONGAM UNIV.</h2>
-            <p style='color:#94a3b8; font-size:0.72rem; margin-top:4px;'>INTEGRATED REGULATION HUB</p>
+        <div style='padding: 20px 10px; border-bottom: 1px solid #e2e8f0; margin-bottom: 20px;'>
+            <h2 style='color:#0f172a; margin:0; font-size:1.15rem; font-weight:700;'>🏛️ CHEONGAM UNIV.</h2>
+            <p style='color:#64748b; font-size:0.72rem; margin-top:4px; font-weight:600;'>INTEGRATED REGULATION HUB</p>
         </div>
     """,
       unsafe_allow_html=True,
@@ -229,54 +229,45 @@ with st.sidebar:
 
   st.markdown(
       "<p"
-      " style='color:#94a3b8; font-size:0.75rem; font-weight:600; padding:0"
-      " 10px; margin-bottom:8px;'>MAIN NAVIGATION</p>",
+      " style='color:#64748b; font-size:0.75rem; font-weight:700; padding:0"
+      " 10px; margin-bottom:8px; letter-spacing:0.05em;'>MAIN NAVIGATION</p>",
       unsafe_allow_html=True,
   )
 
-  # 세션 상태로 메뉴 관리 (라디오 버튼 대신 명확한 버튼 활용)
   if "nav_menu" not in st.session_state:
     st.session_state["nav_menu"] = "📚 통합 규정 조회"
 
   if st.sidebar.button(
-      "📚 통합 규정 조회",
-      use_container_width=True,
-      key="nav_btn_1",
+      "📚 통합 규정 조회", use_container_width=True, key="nav_btn_1"
   ):
     st.session_state["nav_menu"] = "📚 통합 규정 조회"
     st.rerun()
 
   if st.sidebar.button(
-      "🤖 AI 규정 정합성 검토",
-      use_container_width=True,
-      key="nav_btn_2",
+      "🤖 AI 규정 정합성 검토", use_container_width=True, key="nav_btn_2"
   ):
     st.session_state["nav_menu"] = "🤖 AI 규정 정합성 검토"
     st.rerun()
 
   if st.sidebar.button(
-      "📂 부서별 내부 지침 관리",
-      use_container_width=True,
-      key="nav_btn_3",
+      "📂 부서별 내부 지침 관리", use_container_width=True, key="nav_btn_3"
   ):
     st.session_state["nav_menu"] = "📂 부서별 내부 지침 관리"
     st.rerun()
 
   st.markdown(
-      "<hr style='border: 0; border-top: 1px solid #1e293b; margin: 25px 0;'>",
+      "<hr style='border: 0; border-top: 1px solid #e2e8f0; margin: 25px 0;'>",
       unsafe_allow_html=True,
   )
   st.markdown(
       "<p"
-      " style='color:#94a3b8; font-size:0.75rem; font-weight:600; padding:0"
-      " 10px; margin-bottom:8px;'>SYSTEM ADMIN</p>",
+      " style='color:#64748b; font-size:0.75rem; font-weight:700; padding:0"
+      " 10px; margin-bottom:8px; letter-spacing:0.05em;'>SYSTEM ADMIN</p>",
       unsafe_allow_html=True,
   )
 
   if st.sidebar.button(
-      "⚙️ 관리자 시스템 설정",
-      use_container_width=True,
-      key="nav_btn_4",
+      "⚙️ 관리자 시스템 설정", use_container_width=True, key="nav_btn_4"
   ):
     st.session_state["nav_menu"] = "⚙️ 관리자 시스템 설정"
     st.rerun()
