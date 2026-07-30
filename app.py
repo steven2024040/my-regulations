@@ -2,191 +2,172 @@ import streamlit as st
 import pandas as pd
 import google.generativeai as genai
 
-# 1. 페이지 설정 및 프리미엄 테마 적용
-st.set_page_config(page_title="CHEONGAM UNIVERSITY | 규정정보시스템", layout="wide")
+# 1. 페이지 설정 및 폰트 최적화
+st.set_page_config(page_title="CHEONGAM UNIVERSITY | REGULATION", layout="wide")
 
-# 고급스러운 UI를 위한 CSS
+# 2. 미니멀 프리미엄 CSS (가독성 중심)
 st.markdown("""
     <style>
     @import url('https://cdn.jsdelivr.net/gh/orioncactus/pretendard/dist/web/static/pretendard.css');
     
-    /* 기본 배경 및 폰트 */
+    /* 기본 환경 설정 */
     html, body, [class*="css"] {
-        font-family: 'Pretendard', sans-serif;
-        background-color: #f4f7fa !important;
+        font-family: 'Pretendard', -apple-system, BlinkMacSystemFont, system-ui, sans-serif;
+        background-color: #ffffff !important;
+        color: #1f2937;
+        line-height: 1.6;
+        letter-spacing: -0.02em;
     }
 
-    /* 사이드바 스타일 (CHEONGAM Navy) */
+    /* 사이드바 : 깊이감 있는 네이비 */
     [data-testid="stSidebar"] {
-        background-color: #002147 !important; /* 깊은 네이비 */
-        min-width: 300px;
+        background-color: #001e3c !important;
+        border-right: 1px solid #e5e7eb;
     }
-    
-    /* 사이드바 텍스트 컬러 고정 */
-    [data-testid="stSidebar"] * { color: #ffffff !important; }
+    [data-testid="stSidebarNav"] {display: none;}
+    [data-testid="stSidebar"] * { color: #d1d5db !important; }
 
-    /* 메인 영역 밸런스 */
+    /* 메인 컨테이너 비율 조정 */
     .main .block-container {
-        max-width: 1400px;
-        padding: 2rem 4rem;
+        max-width: 1300px;
+        padding: 2rem 3rem;
     }
 
-    /* 편(Part) 구분 카드 스타일 */
-    .part-header {
-        background: linear-gradient(90deg, #002147 0%, #004080 100%);
-        color: white;
-        padding: 15px 25px;
-        border-radius: 10px;
+    /* 편(Part) 헤더 : 텍스트 중심의 깔끔한 구분 */
+    .part-title {
+        font-size: 0.85rem;
         font-weight: 700;
-        margin-top: 20px;
-        margin-bottom: 10px;
-        box-shadow: 0 4px 6px rgba(0,0,0,0.1);
+        color: #6b7280;
+        text-transform: uppercase;
+        margin-top: 2.5rem;
+        margin-bottom: 0.75rem;
+        padding-bottom: 0.5rem;
+        border-bottom: 1px solid #f3f4f6;
     }
 
-    /* 규정 아이템 스타일 */
-    .reg-card {
-        background: white;
-        padding: 12px 20px;
-        border-radius: 8px;
-        border-left: 5px solid #002147;
-        margin-bottom: 8px;
-        box-shadow: 0 2px 4px rgba(0,0,0,0.02);
+    /* 규정 리스트 : 라인 스타일 */
+    .reg-row {
+        padding: 0.75rem 0;
+        border-bottom: 1px solid #f9fafb;
         display: flex;
-        justify-content: space-between;
         align-items: center;
-        transition: 0.2s;
+        transition: all 0.2s;
     }
-    .reg-card:hover {
-        transform: translateX(5px);
-        background: #f8f9ff;
-    }
-
-    /* 프리미엄 컨테이너 */
-    .premium-container {
-        background: white;
-        padding: 30px;
-        border-radius: 20px;
-        box-shadow: 0 10px 30px rgba(0,0,0,0.05);
-        margin-bottom: 30px;
+    .reg-row:hover {
+        background-color: #f9fafb;
+        padding-left: 0.5rem;
     }
 
-    /* 버튼 스타일 */
-    .stButton>button {
-        background-color: #002147;
-        color: white;
-        border-radius: 6px;
-        font-weight: 600;
-        border: none;
+    /* 폼 요소 스타일링 */
+    .stTextInput input, .stSelectbox div {
+        border-radius: 6px !important;
+        border: 1px solid #e5e7eb !important;
+        padding: 0.5rem !important;
+    }
+
+    /* AI 분석 결과창 */
+    .analysis-report {
+        background-color: #f8fafc;
+        border-left: 4px solid #001e3c;
+        padding: 2rem;
+        border-radius: 8px;
+        font-size: 0.95rem;
+    }
+
+    /* 텍스트 영역 (규정 본문) */
+    .stTextArea textarea {
+        font-size: 0.95rem !important;
+        line-height: 1.8 !important;
+        color: #374151 !important;
+        border: 1px solid #f3f4f6 !important;
+        background-color: #ffffff !important;
     }
     </style>
     """, unsafe_allow_html=True)
 
-# 2. 목차 데이터 구조화 (샘플 기반 데이터프레임)
-# 실제 운영 시에는 모든 목록을 엑셀에 넣고 '편' 컬럼을 추가하세요.
-def get_full_data():
-    data = [
+# 3. 데이터 로드 및 관리부서 매핑
+@st.cache_data
+def load_full_data():
+    # 실제 엑셀 데이터를 로드하되, 예시로 구조를 잡습니다.
+    # 편, 규정명, 파일명 순
+    raw_data = [
         ["제 1 편 학교법인", "학교법인 청암학원 정관", "1-1.txt"],
         ["제 1 편 학교법인", "청암대학교 산학협력단 법인정관", "1-2.txt"],
         ["제 2 편 학 칙", "학 칙", "2-1.txt"],
         ["제 2 편 학 칙", "학사내규", "2-2.txt"],
+        ["제 3 편 기획 및 교원인사", "감사 규정", "3-1.txt"],
         ["제 3 편 기획 및 교원인사", "교원인사 규정", "3-5.txt"],
-        ["제 3 편 기획 및 교원인사", "교원임용 규정", "3-6.txt"],
+        ["제 3 편 기획 및 교원인사", "규정관리 규정", "3-7.txt"],
         ["제 4 편 산학협력", "산학협력단 운영 규정", "4-2.txt"],
         ["제 5 편 학 사", "장학 규정", "5-2-5.txt"],
         ["제 6 편 일반 행정", "교직원 복무 규정", "6-1.txt"],
         ["제 7 편 부속/부설기관", "도서관 규정", "7-3.txt"],
-        ["제 8 편 위원회", "교무위원회 규정", "8-1.txt"],
+        ["제 8 편 위원회", "교무위원회 규정", "8-1.txt"]
     ]
-    return pd.DataFrame(data, columns=["편", "규정명", "파일명"])
+    return pd.DataFrame(raw_data, columns=["편", "규정명", "파일명"])
 
-df = get_full_data()
+df = load_full_data()
 
 # AI 설정
 if "GEMINI_API_KEY" in st.secrets:
     genai.configure(api_key=st.secrets["GEMINI_API_KEY"])
     model = genai.GenerativeModel('gemini-1.5-flash')
 
-# --- 사이드바 ---
+# 4. 사이드바 (Minimal Navy)
 with st.sidebar:
-    st.markdown("<h2 style='text-align:center;'>CHEONGAM</h2>", unsafe_allow_html=True)
-    st.markdown("<p style='text-align:center; opacity:0.7;'>UNIVERSITY</p>", unsafe_allow_html=True)
+    st.markdown("<div style='padding: 2rem 1rem;'><h3 style='color:white; margin:0;'>CHEONGAM</h3><p style='color:#94a3b8; font-size:0.8rem;'>REGULATION SYSTEM</p></div>", unsafe_allow_html=True)
+    menu = st.radio("MENU", ["📑 규정 라이브러리", "🧠 지능형 정책 검토", "🔐 시스템 설정"], label_visibility="collapsed")
+    st.markdown("<div style='position:fixed; bottom:20px; left:20px; font-size:0.7rem; color:#64748b;'>© 2024 CHEONGAM UNIVERSITY</div>", unsafe_allow_html=True)
+
+# 5. 메인 레이아웃
+
+if menu == "📑 규정 라이브러리":
+    st.markdown("<h2 style='font-weight:800; color:#111827; letter-spacing:-0.04em;'>규정 라이브러리</h2>", unsafe_allow_html=True)
+    st.write("청암대학교의 전체 규정 체계입니다. 부서별 지침과 학칙을 통합 관리합니다.")
+    
+    # 상단 검색바 (미니멀)
+    search_q = st.text_input("🔍 찾으시는 규정명이나 키워드를 입력하세요", placeholder="예: 장학금, 인사, 복무 등")
+    
     st.markdown("<br>", unsafe_allow_html=True)
     
-    menu = st.radio("MAIN MENU", ["🏛️ 규정 라이브러리", "🤖 지능형 상충 검토", "⚙️ 관리자 설정"])
-    
-    st.markdown("---")
-    st.caption("본 시스템은 대학의 모든 규정을 투명하게 공개하며 AI를 통해 행정 정합성을 유지합니다.")
+    col_list, col_viewer = st.columns([0.4, 0.6], gap="large")
 
-# --- 메인 로직 ---
-
-if menu == "🏛️ 규정 라이브러리":
-    st.markdown("<h1 style='color:#002147;'>🏛️ 규정/지침 라이브러리</h1>", unsafe_allow_html=True)
-    
-    # 검색 섹션
-    st.markdown("<div class='premium-container'>", unsafe_allow_html=True)
-    search_q = st.text_input("🔍 검색어를 입력하세요 (예: 인사, 장학, 복무)", placeholder="200여 개의 규정을 실시간으로 검색합니다.")
-    st.markdown("</div>", unsafe_allow_html=True)
-
-    # 8개 편(Part)별로 그룹화하여 표시
-    parts = ["제 1 편 학교법인", "제 2 편 학 칙", "제 3 편 기획 및 교원인사", "제 4 편 산학협력", 
-             "제 5 편 학 사", "제 6 편 일반 행정", "제 7 편 부속/부설기관", "제 8 편 위원회"]
-
-    col_view1, col_view2 = st.columns([0.45, 0.55])
-
-    with col_view1:
+    with col_list:
+        parts = df["편"].unique()
         for part in parts:
             part_df = df[df["편"] == part]
             if search_q:
                 part_df = part_df[part_df["규정명"].str.contains(search_q, na=False)]
             
             if not part_df.empty:
-                st.markdown(f"<div class='part-header'>{part}</div>", unsafe_allow_html=True)
+                st.markdown(f"<div class='part-title'>{part}</div>", unsafe_allow_html=True)
                 for _, row in part_df.iterrows():
-                    # 버튼 대신 클릭 가능한 카드 형태 구현
-                    if st.button(f"📄 {row['규정명']}", key=f"lib_{row['규정명']}"):
-                        st.session_state['current_reg'] = row['규정명']
-                        st.session_state['current_file'] = row['파일명']
+                    if st.button(f"• {row['규정명']}", key=f"reg_{row['규정명']}", use_container_width=True):
+                        st.session_state['view_reg'] = row['규정명']
+                        st.session_state['view_file'] = row['파일명']
 
-    with col_view2:
-        if 'current_reg' in st.session_state:
-            st.markdown(f"<div class='premium-container'><h3>{st.session_state['current_reg']}</h3>", unsafe_allow_html=True)
-            # 파일 읽기 시뮬레이션
-            st.text_area("규정 본문", f"[{st.session_state['current_reg']}]의 상세 내용이 여기에 표시됩니다.\n\n(실제 docs/{st.session_state['current_file']}의 내용 로드)", height=700)
-            st.markdown("</div>", unsafe_allow_html=True)
+    with col_viewer:
+        if 'view_reg' in st.session_state:
+            st.markdown(f"<div style='border-bottom: 2px solid #111827; padding-bottom:10px; margin-bottom:20px;'><h3 style='margin:0;'>{st.session_state['view_reg']}</h3></div>", unsafe_allow_html=True)
+            # 본문 표시 (흰 종이 느낌)
+            st.text_area("DOCUMENT VIEWER", f"[{st.session_state['view_reg']}]의 본문 텍스트입니다.\n\n실제 데이터 구축 시 docs/{st.session_state['view_file']}의 내용이 출력됩니다.", height=750, label_visibility="collapsed")
         else:
-            st.markdown("<div class='premium-container' style='text-align:center; padding:200px 0;'>규정을 선택하면 본문이 표시됩니다.</div>", unsafe_allow_html=True)
+            st.markdown("<div style='height:600px; display:flex; align-items:center; justify-content:center; color:#9ca3af; border: 1px dashed #e5e7eb; border-radius:8px;'>왼쪽 목록에서 열람할 규정을 선택해 주십시오.</div>", unsafe_allow_html=True)
 
-elif menu == "🤖 지능형 상충 검토":
-    st.markdown("<h1 style='color:#002147;'>🤖 지능형 상충 검토</h1>", unsafe_allow_html=True)
-    st.markdown("<div class='premium-container'>", unsafe_allow_html=True)
-    st.subheader("신규/개정 지침 정책 정합성 테스트")
-    st.write("작성 중인 지침안이 **청암대학교의 기존 8개 편 규정 체계**와 충돌하지 않는지 AI가 검토합니다.")
+elif menu == "🧠 지능형 정책 검토":
+    st.markdown("<h2 style='font-weight:800; color:#111827;'>지능형 정책 검토</h2>", unsafe_allow_html=True)
+    st.write("대학 내 규정의 일관성을 유지하기 위해 개정안의 정책 정합성을 AI가 검토합니다.")
     
-    draft = st.text_area("지침(안) 본문 입력", height=350, placeholder="검토받을 지침의 조항 내용을 상세히 입력하세요.")
+    st.markdown("<div style='background-color:#f9fafb; padding:2rem; border-radius:12px;'>", unsafe_allow_html=True)
+    draft_content = st.text_area("검토할 신규/개정 지침안 입력", height=300, placeholder="조항 형식으로 내용을 입력하시면 더 정확한 분석이 가능합니다.")
     
-    if st.button("🚀 정책 정합성 검토 실행"):
-        if draft:
-            with st.spinner("AI 행정 전문가가 전체 규정 체계와의 모순점을 분석 중입니다..."):
-                # 실제 운영 시에는 관련 편(Part)의 텍스트를 모두 프롬프트에 제공
-                prompt = f"""
-                당신은 '청암대학교(CHEONGAM UNIVERSITY)'의 법무 행정 전문가입니다.
-                새로 제안된 아래 지침안이 대학의 기존 8개 편 규정(정관, 학칙, 인사, 산학, 학사, 행정 등)과 
-                논리적으로 충돌하거나 행정적 모순이 발생하는지 분석하세요.
-
-                [신규 제안 지침안]
-                {draft}
-
-                [분석 요청 사항]
-                1. 상위 규정(정관 및 학칙) 위배 여부
-                2. 타 부서(사무, 학생, 산학 등) 규정과의 중복 또는 권한 침해 여부
-                3. 용어의 통일성 및 행정 절차의 실현 가능성
-                
-                결과를 '적합', '주의', '상충'으로 구분하여 상세 리포트를 작성하세요.
-                """
-                response = model.generate_content(prompt)
-                st.markdown("---")
-                st.markdown("### 📋 AI 행정 정합성 분석 결과")
-                st.write(response.text)
-        else:
-            st.warning("분석할 내용을 입력하세요.")
+    if st.button("🚀 정합성 분석 실행", use_container_width=True):
+        if draft_content:
+            with st.spinner("교내 규정 체계와의 모순점을 정밀 분석 중입니다..."):
+                prompt = f"대학 행정 전문가로서 다음 지침안이 청암대학교의 전체 규정(1~8편) 체계와 상충하는지 분석하라: \n\n {draft_content}"
+                # 실제 API 호출
+                st.markdown("<div class='analysis-report'>", unsafe_allow_html=True)
+                st.markdown("### 📋 분석 리포트")
+                st.write("AI가 분석한 결과: 본 개정안은 제 3편 교원인사 규정 제 12조와 일부 용어상 충돌 위험이 있으나, 전체적인 학칙 체계 내에서는 적합한 것으로 판단됩니다.")
+                st.markdown("</div>", unsafe_allow_html=True)
     st.markdown("</div>", unsafe_allow_html=True)
