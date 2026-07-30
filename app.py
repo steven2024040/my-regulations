@@ -2,7 +2,7 @@ import google.generativeai as genai
 import pandas as pd
 import streamlit as st
 
-# 1. 페이지 설정 (반드시 맨 처음에 위치)
+# 1. 페이지 설정
 st.set_page_config(
     page_title="CHEONGAM UNIVERSITY | REGULATION HUB",
     page_icon="🏛️",
@@ -10,63 +10,36 @@ st.set_page_config(
     initial_sidebar_state="expanded",
 )
 
-# 2. 하이엔드 모던 UI/UX CSS 스타일링
+# 2. 확실한 가독성과 모던 웹 UI를 위한 CSS
 st.markdown(
     """
     <style>
     @import url('https://cdn.jsdelivr.net/gh/orioncactus/pretendard/dist/web/static/pretendard.css');
     
-    /* 전체 기본 폰트 및 배경 설정 */
     html, body, [class*="css"] {
         font-family: 'Pretendard', -apple-system, BlinkMacSystemFont, sans-serif;
-        background-color: #f8fafc !important;
+        background-color: #f8fafc;
         color: #0f172a;
     }
 
-    /* 사이드바 : 세련된 프리미엄 다크 네이비 그라데이션 */
+    /* 사이드바 디자인: 깔끔한 화이트/라이트 그레이 톤 또는 세련된 다크 톤 */
     [data-testid="stSidebar"] {
-        background: linear-gradient(180deg, #090d16 0%, #0f172a 100%) !important;
+        background-color: #0f172a !important;
         border-right: 1px solid #1e293b;
     }
+    
+    [data-testid="stSidebar"] * {
+        color: #f8fafc !important;
+    }
+
     [data-testid="stSidebarNav"] {display: none;}
 
-    /* 사이드바 라디오 메뉴 스타일링 */
-    .stRadio > div {
-        display: flex;
-        flex-direction: column;
-        gap: 8px;
-        padding: 0 10px;
-    }
-    .stRadio label {
-        padding: 12px 16px !important;
-        border-radius: 10px !important;
-        font-size: 0.92rem !important;
-        font-weight: 500 !important;
-        color: #94a3b8 !important;
-        background-color: transparent !important;
-        border: none !important;
-        transition: all 0.25s cubic-bezier(0.4, 0, 0.2, 1);
-        cursor: pointer;
-    }
-    .stRadio label:hover {
-        color: #ffffff !important;
-        background-color: rgba(255, 255, 255, 0.08) !important;
-        transform: translateX(4px);
-    }
-    .stRadio label[data-checked="true"] {
-        color: #ffffff !important;
-        background: linear-gradient(135deg, #2563eb 0%, #1d4ed8 100%) !important;
-        box-shadow: 0 4px 14px rgba(37, 99, 235, 0.4);
-        font-weight: 600 !important;
-    }
-
-    /* 메인 콘텐츠 영역 여백 및 최대 너비 조정 */
     .main .block-container {
         max-width: 1600px;
         padding: 2.5rem 3rem;
     }
 
-    /* 편(Part) 헤더 배지 스타일 */
+    /* 편(Part) 헤더 스타일 */
     .part-header {
         font-size: 0.75rem;
         font-weight: 700;
@@ -81,13 +54,13 @@ st.markdown(
         border-left: 3px solid #2563eb;
     }
 
-    /* 규정 선택 버튼 디자인 */
+    /* 규정 목록 버튼 스타일 */
     .stButton > button {
         width: 100%;
         text-align: left;
         background-color: #ffffff;
         border: 1px solid #e2e8f0;
-        color: #334155;
+        color: #334155 !important;
         border-radius: 10px;
         padding: 10px 14px;
         font-size: 0.88rem;
@@ -97,34 +70,29 @@ st.markdown(
     }
     .stButton > button:hover {
         background-color: #f8fafc;
-        color: #2563eb;
+        color: #2563eb !important;
         border-color: #93c5fd;
         transform: translateY(-1px);
         box-shadow: 0 4px 8px -2px rgba(37, 99, 235, 0.1);
     }
 
-    /* 문서 뷰어 카드 (Notion/Vercel 스타일) */
+    /* 문서 뷰어 카드 */
     .document-card {
         background-color: #ffffff;
         border: 1px solid #e2e8f0;
         border-radius: 16px;
         padding: 36px;
-        box-shadow: 0 10px 25px -5px rgba(0, 0, 0, 0.04), 0 8px 10px -6px rgba(0, 0, 0, 0.04);
+        box-shadow: 0 10px 25px -5px rgba(0, 0, 0, 0.04);
         min-height: 780px;
     }
     
-    /* 검색창 모던 디자인 */
     .stTextInput input {
         border-radius: 10px !important;
         border: 1px solid #cbd5e1 !important;
         padding: 12px 16px !important;
         background-color: #ffffff !important;
+        color: #0f172a !important;
         font-size: 0.95rem !important;
-        transition: all 0.2s;
-    }
-    .stTextInput input:focus {
-        border-color: #2563eb !important;
-        box-shadow: 0 0 0 4px rgba(37, 99, 235, 0.12) !important;
     }
     </style>
     """,
@@ -132,17 +100,14 @@ st.markdown(
 )
 
 
-# 3. 청암대학교 전체 규정 데이터 (목차 구조화)
+# 3. 청암대학교 전체 규정 데이터
 @st.cache_data
 def get_cheongam_regulations():
   raw_data = [
-      # 제1편 학교법인
       ["제 1 편 학교법인", "학교법인 청암학원 정관", "1-1.txt"],
       ["제 1 편 학교법인", "청암대학교 산학협력단 법인정관", "1-2.txt"],
-      # 제2편 학칙
       ["제 2 편 학 칙", "학 칙", "2-1.txt"],
       ["제 2 편 학 칙", "학사내규", "2-2.txt"],
-      # 제3편 기획 및 교원인사
       ["제 3 편 기획 및 교원인사", "감사 규정", "3-1.txt"],
       ["제 3 편 기획 및 교원인사", "교원성과급 규정", "3-2.txt"],
       ["제 3 편 기획 및 교원인사", "교원연봉제 운영 규정", "3-3.txt"],
@@ -179,7 +144,6 @@ def get_cheongam_regulations():
       ["제 3 편 기획 및 교원인사", "전임교원 특별채용 규정", "3-17.txt"],
       ["제 3 편 기획 및 교원인사", "강사 인사 규정", "3-18.txt"],
       ["제 3 편 기획 및 교원인사", "강사 신규임용 시행 규칙", "3-19.txt"],
-      # 제4편 산학협력
       [
           "제 4 편 산학협력",
           "국가연구개발사업 보안업무관리 규정",
@@ -199,7 +163,6 @@ def get_cheongam_regulations():
       ["제 4 편 산학협력", "학생연구자 지원 규정", "4-13.txt"],
       ["제 4 편 산학협력", "혁신지원사업 운영 규정", "4-14.txt"],
       ["제 4 편 산학협력", "지역혁신중심 대학지원(RISE)사업 운영 규정", "4-15.txt"],
-      # 제5편 학사 (교무, 학생)
       ["제 5 편 학 사", "강사료 지급 규정", "5-1-1.txt"],
       [
           "제 5 편 학 사",
@@ -217,7 +180,6 @@ def get_cheongam_regulations():
       ["제 5 편 학 사", "장학 규정 시행 규칙", "5-2-5-1.txt"],
       ["제 5 편 학 사", "학생 상벌 규정", "5-2-6.txt"],
       ["제 5 편 학 사", "연구윤리 규정", "5-1-16.txt"],
-      # 제6편 일반 행정
       ["제 6 편 일반 행정", "교직원 복무 규정", "6-1.txt"],
       ["제 6 편 일반 행정", "교직원 포상 규정", "6-2.txt"],
       ["제 6 편 일반 행정", "당직근무 규정", "6-3.txt"],
@@ -228,7 +190,6 @@ def get_cheongam_regulations():
       ["제 6 편 일반 행정", "예산 관리 규정", "6-23.txt"],
       ["제 6 편 일반 행정", "교직원 보수 규정", "6-24.txt"],
       ["제 6 편 일반 행정", "직제 규정", "6-37.txt"],
-      # 제7편 부속/부설기관
       ["제 7 편 부속/부설기관", "교수·학습지원센터 운영 규정", "7-1.txt"],
       ["제 7 편 부속/부설기관", "국제교류원 운영 규정", "7-2.txt"],
       ["제 7 편 부속/부설기관", "도서관 규정", "7-3.txt"],
@@ -238,7 +199,6 @@ def get_cheongam_regulations():
       ["제 7 편 부속/부설기관", "청암대학교 인권센터 규정", "7-23.txt"],
       ["제 7 편 부속/부설기관", "IR센터 운영 규정", "7-25.txt"],
       ["제 7 편 부속/부설기관", "AI·원격교육지원센터 운영 규정", "7-26.txt"],
-      # 제8편 위원회
       ["제 8 편 위원회", "교무위원회 규정", "8-1.txt"],
       ["제 8 편 위원회", "교원양성위원회 규정", "8-3.txt"],
       ["제 8 편 위원회", "교육과정편성 및 심의위원회 규정", "8-4.txt"],
@@ -255,36 +215,76 @@ def get_cheongam_regulations():
 
 df = get_cheongam_regulations()
 
-# 4. 사이드바 구성
+# 4. 사이드바 구성 (가독성 확실한 버튼형 내비게이션으로 변경)
 with st.sidebar:
   st.markdown(
       """
-        <div style='padding: 30px 16px 20px 16px;'>
-            <h2 style='color:white; margin:0; font-size:1.15rem; font-weight:700; letter-spacing:0.5px;'>CHEONGAM UNIV.</h2>
-            <p style='color:#64748b; font-size:0.72rem; margin-top:5px; letter-spacing:0.05em;'>INTEGRATED REGULATION HUB</p>
+        <div style='padding: 20px 10px; border-bottom: 1px solid #1e293b; margin-bottom: 20px;'>
+            <h2 style='color:white; margin:0; font-size:1.1rem; font-weight:700;'>🏛️ CHEONGAM UNIV.</h2>
+            <p style='color:#94a3b8; font-size:0.72rem; margin-top:4px;'>INTEGRATED REGULATION HUB</p>
         </div>
     """,
       unsafe_allow_html=True,
   )
 
-  main_menu = st.radio(
-      "MAIN NAV",
-      ["📚 통합 규정 조회", "🤖 AI 규정 정합성 검토", "📂 부서별 내부 지침 관리"],
-      label_visibility="collapsed",
-  )
-
-  st.markdown("<div style='height: 28vh;'></div>", unsafe_allow_html=True)
   st.markdown(
-      "<div style='padding: 0 16px; color: #475569; font-size: 0.75rem;"
-      " font-weight: 600;'>SYSTEM ADMIN</div>",
+      "<p"
+      " style='color:#94a3b8; font-size:0.75rem; font-weight:600; padding:0"
+      " 10px; margin-bottom:8px;'>MAIN NAVIGATION</p>",
       unsafe_allow_html=True,
   )
-  admin_nav = st.radio(
-      "ADMIN NAV", ["⚙️ 관리자 설정"], label_visibility="collapsed"
+
+  # 세션 상태로 메뉴 관리 (라디오 버튼 대신 명확한 버튼 활용)
+  if "nav_menu" not in st.session_state:
+    st.session_state["nav_menu"] = "📚 통합 규정 조회"
+
+  if st.sidebar.button(
+      "📚 통합 규정 조회",
+      use_container_width=True,
+      key="nav_btn_1",
+  ):
+    st.session_state["nav_menu"] = "📚 통합 규정 조회"
+    st.rerun()
+
+  if st.sidebar.button(
+      "🤖 AI 규정 정합성 검토",
+      use_container_width=True,
+      key="nav_btn_2",
+  ):
+    st.session_state["nav_menu"] = "🤖 AI 규정 정합성 검토"
+    st.rerun()
+
+  if st.sidebar.button(
+      "📂 부서별 내부 지침 관리",
+      use_container_width=True,
+      key="nav_btn_3",
+  ):
+    st.session_state["nav_menu"] = "📂 부서별 내부 지침 관리"
+    st.rerun()
+
+  st.markdown(
+      "<hr style='border: 0; border-top: 1px solid #1e293b; margin: 25px 0;'>",
+      unsafe_allow_html=True,
+  )
+  st.markdown(
+      "<p"
+      " style='color:#94a3b8; font-size:0.75rem; font-weight:600; padding:0"
+      " 10px; margin-bottom:8px;'>SYSTEM ADMIN</p>",
+      unsafe_allow_html=True,
   )
 
+  if st.sidebar.button(
+      "⚙️ 관리자 시스템 설정",
+      use_container_width=True,
+      key="nav_btn_4",
+  ):
+    st.session_state["nav_menu"] = "⚙️ 관리자 시스템 설정"
+    st.rerun()
+
+current_page = st.session_state["nav_menu"]
+
 # --- 5. [메인 1] 통합 규정 조회 ---
-if main_menu == "📚 통합 규정 조회":
+if current_page == "📚 통합 규정 조회":
   st.markdown(
       "<h2 style='font-weight:700; color:#0f172a; margin-bottom:4px; font-size:"
       "1.65rem;'>청암대학교 통합 규정집</h2>",
@@ -302,8 +302,6 @@ if main_menu == "📚 통합 규정 조회":
       placeholder="🔍 규정명 또는 키워드 입력 (예: 인사, 장학, 위원회, 강사...)",
       label_visibility="collapsed",
   )
-
-  st.markdown("<div style='height: 5px;'></div>", unsafe_allow_html=True)
 
   col_list, col_content = st.columns([0.38, 0.62], gap="large")
 
@@ -382,7 +380,7 @@ if main_menu == "📚 통합 규정 조회":
     st.markdown("</div>", unsafe_allow_html=True)
 
 # --- 6. [메인 2] AI 규정 정합성 검토 ---
-elif main_menu == "🤖 AI 규정 정합성 검토":
+elif current_page == "🤖 AI 규정 정합성 검토":
   st.markdown(
       "<h2 style='font-weight:700; color:#0f172a; margin-bottom:4px; font-size:"
       "1.65rem;'>AI 규정 충돌 및 정합성 검토</h2>",
@@ -427,7 +425,7 @@ elif main_menu == "🤖 AI 규정 정합성 검토":
   st.markdown("</div>", unsafe_allow_html=True)
 
 # --- 7. [메인 3] 부서별 내부 지침 관리 ---
-elif main_menu == "📂 부서별 내부 지침 관리":
+elif current_page == "📂 부서별 내부 지침 관리":
   st.markdown(
       "<h2 style='font-weight:700; color:#0f172a; margin-bottom:4px; font-size:"
       "1.65rem;'>부서별 내부 지침 아카이브</h2>",
@@ -481,8 +479,8 @@ elif main_menu == "📂 부서별 내부 지침 관리":
     )
     st.markdown("</div>", unsafe_allow_html=True)
 
-# --- 8. 관리자 설정 ---
-if admin_nav == "⚙️ 관리자 설정":
+# --- 8. 관리자 시스템 설정 ---
+elif current_page == "⚙️ 관리자 시스템 설정":
   st.markdown(
       "<h2 style='font-weight:700; color:#0f172a; margin-bottom:20px;'>관리자"
       " 시스템 설정</h2>",
