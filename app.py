@@ -10,7 +10,7 @@ st.set_page_config(
     initial_sidebar_state="expanded",
 )
 
-# 2. 깔끔하고 직관적인 UI 스타일 (가독성 최우선)
+# 2. 구조화된 그리드 UI를 위한 CSS
 st.markdown(
     """
     <style>
@@ -36,36 +36,20 @@ st.markdown(
         padding: 2.5rem 3rem;
     }
 
-    /* 편(Part) 헤더 */
-    .part-header {
-        font-size: 0.8rem;
-        font-weight: 700;
-        color: #1d4ed8;
-        background-color: #eff6ff;
-        padding: 6px 12px;
-        border-radius: 6px;
-        margin-top: 18px;
-        margin-bottom: 6px;
-        border-left: 3px solid #2563eb;
-    }
-
-    /* 규정 선택 버튼 */
-    .stButton > button {
-        width: 100%;
-        text-align: left;
+    /* 규정 카드 스타일 */
+    .reg-card {
         background-color: #ffffff;
         border: 1px solid #e2e8f0;
-        color: #334155 !important;
-        border-radius: 8px;
-        padding: 8px 12px;
-        font-size: 0.88rem;
-        font-weight: 500;
-        transition: all 0.15s ease;
+        border-radius: 10px;
+        padding: 16px;
+        margin-bottom: 12px;
+        box-shadow: 0 1px 3px rgba(0,0,0,0.02);
+        transition: all 0.2s ease;
     }
-    .stButton > button:hover {
-        background-color: #f1f5f9;
-        color: #1d4ed8 !important;
-        border-color: #cbd5e1;
+    .reg-card:hover {
+        border-color: #3b82f6;
+        box-shadow: 0 4px 6px -1px rgba(59, 130, 246, 0.1);
+        transform: translateY(-2px);
     }
 
     /* 문서 뷰어 박스 */
@@ -206,7 +190,7 @@ def get_cheongam_regulations():
 
 df = get_cheongam_regulations()
 
-# 4. 사이드바 메뉴 (목적에 집중한 명확한 내비게이션)
+# 4. 사이드바 메뉴
 with st.sidebar:
   st.markdown(
       """
@@ -219,14 +203,14 @@ with st.sidebar:
   )
 
   if "menu" not in st.session_state:
-    st.session_state["menu"] = "📚 전체 규정 조회 및 검색"
+    st.session_state["menu"] = "📚 전체 규정 조회 및 구조화 뷰"
 
   if st.sidebar.button(
-      "📚 1·2번. 전체 규정 조회 및 검색",
+      "📚 1·2번. 규정 구조화 조회 및 검색",
       use_container_width=True,
       key="m1",
   ):
-    st.session_state["menu"] = "📚 전체 규정 조회 및 검색"
+    st.session_state["menu"] = "📚 전체 규정 조회 및 구조화 뷰"
     st.rerun()
 
   if st.sidebar.button(
@@ -237,109 +221,151 @@ with st.sidebar:
 
 current_menu = st.session_state["menu"]
 
-# --- [목적 1 & 2] 전체 규정 조회 및 실시간 검색 ---
-if current_menu == "📚 전체 규정 조회 및 검색":
+# --- [목적 1 & 2] 구조화된 탭 & 검색 뷰 ---
+if current_menu == "📚 전체 규정 조회 및 구조화 뷰":
   st.markdown(
-      "<h2 style='font-weight:700; color:#0f172a; margin-bottom:5px;'>전체 규정"
-      " 통합 조회 및 검색</h2>",
+      "<h2 style='font-weight:700; color:#0f172a; margin-bottom:5px;'>청암대학교"
+      " 통합 규정 아카이브</h2>",
       unsafe_allow_html=True,
   )
   st.markdown(
-      "<p style='color:#64748b; margin-bottom:20px;'>목차를 통해 전체 규정을"
-      " 한눈에 확인하거나, 검색창을 통해 원하는 규정을 즉시 찾아보세요.</p>",
+      "<p style='color:#64748b; margin-bottom:20px;'>편(Part)별 탭을 선택하여"
+      " 해당 규정들을 한눈에 확인하거나, 통합 검색창을 이용하세요.</p>",
       unsafe_allow_html=True,
   )
 
-  # [목적 2] 실시간 검색 바
+  # 실시간 검색 바
   search_keyword = st.text_input(
       "검색",
-      placeholder="🔍 찾으시는 규정명 또는 키워드를 입력하세요 (예: 인사, 장학, 위원회...)",
+      placeholder="🔍 전체 규정 중 키워드 검색 (예: 인사, 장학, 위원회, 강사...)",
       label_visibility="collapsed",
   )
 
-  col_index, col_view = st.columns([0.4, 0.6], gap="large")
-
-  with col_index:
+  # 검색어가 있는 경우: 검색 결과 중심의 그리드 뷰 출력
+  if search_keyword.strip():
     st.markdown(
-        "<div"
-        " style='background:white; border:1px solid #e2e8f0; border-radius:12px;"
-        " padding:16px; height:750px; overflow-y:auto;'>",
+        f"<p style='font-weight:600; color:#2563eb; margin:10px 0;'>🔍 '{search_keyword}'"
+        f" 검색 결과</p>",
         unsafe_allow_html=True,
     )
-    st.markdown(
-        "<b style='color:#1e293b; font-size:0.95rem;'>📋 전체 편별 목차</b>",
-        unsafe_allow_html=True,
-    )
+    search_df = df[df["규정명"].str.contains(search_keyword, na=False)]
 
-    # 검색 필터링 적용
-    target_df = df
-    if search_keyword.strip():
-      target_df = df[df["규정명"].str.contains(search_keyword, na=False)]
-      st.markdown(
-          f"<p style='font-size:0.8rem; color:#2563eb; margin:5px 0 10px 0;'>검색"
-          f" 결과: {len(target_df)}건</p>",
-          unsafe_allow_html=True,
-      )
-
-    # [목적 1] 편별로 한눈에 볼 수 있도록 정렬
-    for part in target_df["편"].unique():
-      part_subset = target_df[target_df["편"] == part]
-      if not part_subset.empty:
+    if search_df.empty:
+      st.info("검색 결과가 없습니다.")
+    else:
+      col_l, col_r = st.columns([0.45, 0.55], gap="large")
+      with col_l:
         st.markdown(
-            f"<div class='part-header'>{part} ({len(part_subset)}건)</div>",
+            "<div style='background:white; border:1px solid"
+            " #e2e8f0; border-radius:12px; padding:16px; height:700px;"
+            " overflow-y:auto;'>",
             unsafe_allow_html=True,
         )
-        for _, row in part_subset.iterrows():
-          is_selected = st.session_state.get("selected_reg") == row["규정명"]
-          btn_title = (
-              f"📄 {row['규정명']}"
-              if not is_selected
-              else f"✨ {row['규정명']} (열람중)"
-          )
-
+        for _, row in search_df.iterrows():
           if st.button(
-              btn_title, key=f"reg_{row['파일명']}", use_container_width=True
+              f"[{row['편']}] {row['규정명']}",
+              key=f"srch_{row['파일명']}",
+              use_container_width=True,
           ):
             st.session_state["selected_reg"] = row["규정명"]
             st.session_state["selected_file"] = row["파일명"]
             st.rerun()
+        st.markdown("</div>", unsafe_allow_html=True)
 
-    st.markdown("</div>", unsafe_allow_html=True)
+      with col_r:
+        st.markdown("<div class='viewer-box'>", unsafe_allow_html=True)
+        if "selected_reg" in st.session_state:
+          st.markdown(
+              f"<h3>{st.session_state['selected_reg']}</h3><p"
+              f" style='color:gray;'>코드:"
+              f" {st.session_state.get('selected_file')}</p><hr>",
+              unsafe_allow_html=True,
+          )
+          st.text_area(
+              "CONTENT",
+              f"[{st.session_state['selected_reg']}] 원문 내용...\n\n- 목적 및 적용 범위 조문",
+              height=550,
+              label_visibility="collapsed",
+          )
+        else:
+          st.write("목록에서 규정을 선택하세요.")
+        st.markdown("</div>", unsafe_allow_html=True)
 
-  with col_view:
-    st.markdown("<div class='viewer-box'>", unsafe_allow_html=True)
-    if "selected_reg" in st.session_state:
-      st.markdown(
-          f"""
-                <div style='border-bottom: 2px solid #f1f5f9; padding-bottom:15px; margin-bottom:20px;'>
-                    <span style='background:#eff6ff; color:#1d4ed8; padding:4px 10px; border-radius:15px; font-size:0.75rem; font-weight:600;'>공식 규정 원문</span>
-                    <h3 style='margin:10px 0 0 0; color:#0f172a; font-size:1.3rem;'>{st.session_state['selected_reg']}</h3>
-                    <p style='color:#64748b; font-size:0.8rem; margin:4px 0 0 0;'>문서 코드: {st.session_state.get('selected_file', '')}</p>
-                </div>
-            """,
-          unsafe_allow_html=True,
-      )
+  else:
+    # 검색어가 없을 때: 8개 편(Part)을 탭(Tab) 구조로 완벽히 구조화
+    parts = list(df["편"].unique())
+    part_tabs = st.tabs(parts)
 
-      sample_content = f"[{st.session_state['selected_reg']}]\n\n본 문서는 청암대학교 공식 규정집 원문입니다.\n\n- 제1조(목적) 이 규정은 청암대학교의 원활한 행정 운영과 기준 확립을 목적으로 한다.\n- 제2조(적용범위) 교내 각 부서 및 교직원에게 적용한다."
-      st.text_area(
-          "CONTENT",
-          sample_content,
-          height=580,
-          label_visibility="collapsed",
-      )
-    else:
-      st.markdown(
-          """
-                <div style='height: 650px; display:flex; flex-direction:column; align-items:center; justify-content:center; color:#94a3b8; text-align:center;'>
-                    <p style='font-size:1.1rem; font-weight:600; color:#334155; margin:0;'>좌측 목차에서 규정을 선택하거나 검색해 주세요.</p>
-                    <p style='font-size:0.85rem; margin-top:6px;'>선택한 규정의 상세 조문 내용이 이 곳에 표시됩니다.</p>
-                </div>
-            """,
-          unsafe_allow_html=True,
-      )
-    st.markdown("</div>", unsafe_allow_html=True)
+    for idx, part_name in enumerate(parts):
+      with part_tabs[idx]:
+        part_df = df[df["편"] == part_name]
 
-# --- [목적 3] AI 규정 충돌 및 상충 검토 ---
+        col_list, col_viewer = st.columns([0.45, 0.55], gap="large")
+
+        with col_list:
+          st.markdown(
+              "<div style='background:white; border:1px solid"
+              " #e2e8f0; border-radius:12px; padding:16px; height:700px;"
+              " overflow-y:auto;'>",
+              unsafe_allow_html=True,
+          )
+          st.markdown(
+              f"<b style='color:#1e293b; font-size:1rem;'>📁 {part_name}목록"
+              f" ({len(part_df)}건)</b><hr style='margin:10px 0;'>",
+              unsafe_allow_html=True,
+          )
+
+          for _, row in part_df.iterrows():
+            is_active = st.session_state.get("selected_reg") == row["규정명"]
+            btn_label = (
+                f"📄 {row['규정명']}"
+                if not is_active
+                else f"✨ {row['규정명']} (열람중)"
+            )
+
+            if st.button(
+                btn_label, key=f"tab_reg_{row['파일명']}", use_container_width=True
+            ):
+              st.session_state["selected_reg"] = row["규정명"]
+              st.session_state["selected_file"] = row["파일명"]
+              st.rerun()
+
+          st.markdown("</div>", unsafe_allow_html=True)
+
+        with col_viewer:
+          st.markdown("<div class='viewer-box'>", unsafe_allow_html=True)
+          if "selected_reg" in st.session_state:
+            st.markdown(
+                f"""
+                        <div style='border-bottom: 2px solid #f1f5f9; padding-bottom:15px; margin-bottom:20px;'>
+                            <span style='background:#eff6ff; color:#1d4ed8; padding:4px 10px; border-radius:15px; font-size:0.75rem; font-weight:600;'>공식 규정 원문</span>
+                            <h3 style='margin:10px 0 0 0; color:#0f172a; font-size:1.3rem;'>{st.session_state['selected_reg']}</h3>
+                            <p style='color:#64748b; font-size:0.8rem; margin:4px 0 0 0;'>문서 코드: {st.session_state.get('selected_file', '')}</p>
+                        </div>
+                    """,
+                unsafe_allow_html=True,
+            )
+
+            sample_content = f"[{st.session_state['selected_reg']}]\n\n본 문서는 청암대학교 공식 규정집 원문입니다.\n\n- 제1조(목적) 이 규정은 청암대학교의 효율적인 행정 운영과 기준 확립을 목적으로 한다.\n- 제2조(적용범위) 교내 각 부서 및 교직원에게 적용한다."
+            st.text_area(
+                "CONTENT",
+                sample_content,
+                height=550,
+                label_visibility="collapsed",
+            )
+          else:
+            st.markdown(
+                """
+                        <div style='height: 600px; display:flex; flex-direction:column; align-items:center; justify-content:center; color:#94a3b8; text-align:center;'>
+                            <p style='font-size:1.05rem; font-weight:600; color:#334155; margin:0;'>해당 편의 규정을 선택해 주세요.</p>
+                            <p style='font-size:0.85rem; margin-top:6px;'>선택한 규정의 상세 조문 내용이 이 곳에 표시됩니다.</p>
+                        </div>
+                    """,
+                unsafe_allow_html=True,
+            )
+          st.markdown("</div>", unsafe_allow_html=True)
+
+# --- [목적 3] AI 규정 충돌 검토 ---
 elif current_menu == "🤖 AI 규정 충돌 검토":
   st.markdown(
       "<h2 style='font-weight:700; color:#0f172a; margin-bottom:5px;'>신규"
