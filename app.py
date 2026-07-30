@@ -2,172 +2,182 @@ import streamlit as st
 import pandas as pd
 import google.generativeai as genai
 
-# 1. 페이지 설정 및 폰트 최적화
+# 1. 페이지 설정
 st.set_page_config(page_title="CHEONGAM UNIVERSITY | REGULATION", layout="wide")
 
-# 2. 미니멀 프리미엄 CSS (가독성 중심)
+# 2. 전문적인 메뉴 및 레이아웃 CSS
 st.markdown("""
     <style>
     @import url('https://cdn.jsdelivr.net/gh/orioncactus/pretendard/dist/web/static/pretendard.css');
     
-    /* 기본 환경 설정 */
+    /* 전체 폰트 및 배경 */
     html, body, [class*="css"] {
-        font-family: 'Pretendard', -apple-system, BlinkMacSystemFont, system-ui, sans-serif;
+        font-family: 'Pretendard', sans-serif;
         background-color: #ffffff !important;
-        color: #1f2937;
-        line-height: 1.6;
-        letter-spacing: -0.02em;
+        color: #1a1a1a;
     }
 
-    /* 사이드바 : 깊이감 있는 네이비 */
+    /* 사이드바 : 정갈한 네이비 시스템 메뉴 */
     [data-testid="stSidebar"] {
-        background-color: #001e3c !important;
+        background-color: #001529 !important;
         border-right: 1px solid #e5e7eb;
     }
-    [data-testid="stSidebarNav"] {display: none;}
-    [data-testid="stSidebar"] * { color: #d1d5db !important; }
+    [data-testid="stSidebarNav"] {display: none;} /* 기본 메뉴 숨김 */
 
-    /* 메인 컨테이너 비율 조정 */
-    .main .block-container {
-        max-width: 1300px;
-        padding: 2rem 3rem;
-    }
-
-    /* 편(Part) 헤더 : 텍스트 중심의 깔끔한 구분 */
-    .part-title {
-        font-size: 0.85rem;
-        font-weight: 700;
-        color: #6b7280;
-        text-transform: uppercase;
-        margin-top: 2.5rem;
-        margin-bottom: 0.75rem;
-        padding-bottom: 0.5rem;
-        border-bottom: 1px solid #f3f4f6;
-    }
-
-    /* 규정 리스트 : 라인 스타일 */
-    .reg-row {
-        padding: 0.75rem 0;
-        border-bottom: 1px solid #f9fafb;
+    /* 메뉴 아이템 스타일링 */
+    .stRadio > div {
         display: flex;
-        align-items: center;
-        transition: all 0.2s;
+        flex-direction: column;
+        gap: 4px;
+        padding: 0 10px;
     }
-    .reg-row:hover {
-        background-color: #f9fafb;
-        padding-left: 0.5rem;
-    }
-
-    /* 폼 요소 스타일링 */
-    .stTextInput input, .stSelectbox div {
-        border-radius: 6px !important;
-        border: 1px solid #e5e7eb !important;
-        padding: 0.5rem !important;
-    }
-
-    /* AI 분석 결과창 */
-    .analysis-report {
-        background-color: #f8fafc;
-        border-left: 4px solid #001e3c;
-        padding: 2rem;
-        border-radius: 8px;
-        font-size: 0.95rem;
-    }
-
-    /* 텍스트 영역 (규정 본문) */
-    .stTextArea textarea {
+    .stRadio label {
+        padding: 12px 20px !important;
+        border-radius: 4px !important;
         font-size: 0.95rem !important;
-        line-height: 1.8 !important;
-        color: #374151 !important;
-        border: 1px solid #f3f4f6 !important;
-        background-color: #ffffff !important;
+        font-weight: 500 !important;
+        color: #a6adb4 !important;
+        background-color: transparent !important;
+        border: none !important;
+        transition: all 0.2s;
+        cursor: pointer;
+    }
+    /* 메뉴 호버 및 활성화 상태 */
+    .stRadio label:hover {
+        color: #ffffff !important;
+        background-color: rgba(255,255,255,0.05) !important;
+    }
+    .stRadio label[data-checked="true"] {
+        color: #ffffff !important;
+        background-color: #1890ff !important; /* 청암 블루 포인트 */
+        font-weight: 600 !important;
+    }
+    
+    /* 사이드바 하단 관리자 메뉴용 여백 */
+    .sidebar-footer {
+        position: fixed;
+        bottom: 20px;
+        width: 260px;
+        padding: 0 20px;
+    }
+
+    /* 메인 콘텐츠 영역 밸런스 */
+    .main .block-container {
+        max-width: 1400px;
+        padding: 3rem 4rem;
+    }
+
+    /* 편(Part) 구분선 및 제목 */
+    .part-divider {
+        font-size: 0.8rem;
+        font-weight: 700;
+        color: #8c8c8c;
+        margin-top: 30px;
+        margin-bottom: 10px;
+        padding-bottom: 5px;
+        border-bottom: 1px solid #f0f0f0;
+        letter-spacing: 0.05em;
+    }
+
+    /* 규정 리스트 버튼 (투명 배경) */
+    .stButton > button {
+        text-align: left;
+        background-color: transparent;
+        border: none;
+        color: #434343;
+        padding: 8px 0;
+        font-size: 0.95rem;
+        transition: 0.2s;
+    }
+    .stButton > button:hover {
+        color: #1890ff;
+        padding-left: 5px;
+        background-color: transparent;
+    }
+
+    /* 본문 뷰어 */
+    .document-box {
+        background-color: #ffffff;
+        border: 1px solid #d9d9d9;
+        border-radius: 2px;
+        padding: 40px;
+        min-height: 800px;
     }
     </style>
     """, unsafe_allow_html=True)
 
-# 3. 데이터 로드 및 관리부서 매핑
-@st.cache_data
-def load_full_data():
-    # 실제 엑셀 데이터를 로드하되, 예시로 구조를 잡습니다.
-    # 편, 규정명, 파일명 순
-    raw_data = [
+# 3. 데이터 로드 (8개 편 구조)
+def get_regulation_data():
+    raw = [
         ["제 1 편 학교법인", "학교법인 청암학원 정관", "1-1.txt"],
         ["제 1 편 학교법인", "청암대학교 산학협력단 법인정관", "1-2.txt"],
         ["제 2 편 학 칙", "학 칙", "2-1.txt"],
         ["제 2 편 학 칙", "학사내규", "2-2.txt"],
         ["제 3 편 기획 및 교원인사", "감사 규정", "3-1.txt"],
         ["제 3 편 기획 및 교원인사", "교원인사 규정", "3-5.txt"],
-        ["제 3 편 기획 및 교원인사", "규정관리 규정", "3-7.txt"],
-        ["제 4 편 산학협력", "산학협력단 운영 규정", "4-2.txt"],
         ["제 5 편 학 사", "장학 규정", "5-2-5.txt"],
-        ["제 6 편 일반 행정", "교직원 복무 규정", "6-1.txt"],
-        ["제 7 편 부속/부설기관", "도서관 규정", "7-3.txt"],
-        ["제 8 편 위원회", "교무위원회 규정", "8-1.txt"]
+        ["제 6 편 일반 행정", "교직원 복무 규정", "6-1.txt"]
     ]
-    return pd.DataFrame(raw_data, columns=["편", "규정명", "파일명"])
+    return pd.DataFrame(raw, columns=["편", "규정명", "파일명"])
 
-df = load_full_data()
+df = get_regulation_data()
 
-# AI 설정
-if "GEMINI_API_KEY" in st.secrets:
-    genai.configure(api_key=st.secrets["GEMINI_API_KEY"])
-    model = genai.GenerativeModel('gemini-1.5-flash')
-
-# 4. 사이드바 (Minimal Navy)
+# 4. 사이드바 (메뉴다운 메뉴)
 with st.sidebar:
-    st.markdown("<div style='padding: 2rem 1rem;'><h3 style='color:white; margin:0;'>CHEONGAM</h3><p style='color:#94a3b8; font-size:0.8rem;'>REGULATION SYSTEM</p></div>", unsafe_allow_html=True)
-    menu = st.radio("MENU", ["📑 규정 라이브러리", "🧠 지능형 정책 검토", "🔐 시스템 설정"], label_visibility="collapsed")
-    st.markdown("<div style='position:fixed; bottom:20px; left:20px; font-size:0.7rem; color:#64748b;'>© 2024 CHEONGAM UNIVERSITY</div>", unsafe_allow_html=True)
-
-# 5. 메인 레이아웃
-
-if menu == "📑 규정 라이브러리":
-    st.markdown("<h2 style='font-weight:800; color:#111827; letter-spacing:-0.04em;'>규정 라이브러리</h2>", unsafe_allow_html=True)
-    st.write("청암대학교의 전체 규정 체계입니다. 부서별 지침과 학칙을 통합 관리합니다.")
+    st.markdown("<div style='padding: 40px 20px;'><h2 style='color:white; margin:0; font-size:1.2rem; letter-spacing:1px;'>CHEONGAM</h2><p style='color:#595959; font-size:0.75rem; margin-top:5px;'>UNIVERSITY SYSTEM</p></div>", unsafe_allow_html=True)
     
-    # 상단 검색바 (미니멀)
-    search_q = st.text_input("🔍 찾으시는 규정명이나 키워드를 입력하세요", placeholder="예: 장학금, 인사, 복무 등")
+    # 상단/중단 메뉴
+    main_menu = st.radio("MAIN NAV", ["규정 보기/찾기", "규정 AI 검토"], label_visibility="collapsed")
     
-    st.markdown("<br>", unsafe_allow_html=True)
-    
-    col_list, col_viewer = st.columns([0.4, 0.6], gap="large")
+    # 하단 배치 (관리자 메뉴)
+    st.markdown("<div style='height: 40vh;'></div>", unsafe_allow_html=True) # 여백 확보
+    st.markdown("---")
+    admin_nav = st.radio("ADMIN NAV", ["관리자 메뉴"], label_visibility="collapsed")
 
+# 5. 페이지별 로직 (실제로는 main_menu와 admin_nav를 통합 관리)
+current_page = admin_nav if admin_nav == "관리자 메뉴" and st.session_state.get('last_nav') == 'admin' else main_menu
+
+# --- 메인 레이아웃 ---
+if main_menu == "규정 보기/찾기":
+    st.markdown("<h2 style='font-weight:700; margin-bottom:20px;'>규정 보기/찾기</h2>", unsafe_allow_html=True)
+    
+    # 상단 검색 바
+    search_q = st.text_input("검색", placeholder="찾으시는 규정명을 입력하십시오.", label_visibility="collapsed")
+    
+    col_list, col_content = st.columns([0.4, 0.6], gap="large")
+    
     with col_list:
-        parts = df["편"].unique()
-        for part in parts:
+        for part in df["편"].unique():
             part_df = df[df["편"] == part]
             if search_q:
                 part_df = part_df[part_df["규정명"].str.contains(search_q, na=False)]
             
             if not part_df.empty:
-                st.markdown(f"<div class='part-title'>{part}</div>", unsafe_allow_html=True)
+                st.markdown(f"<div class='part-divider'>{part}</div>", unsafe_allow_html=True)
                 for _, row in part_df.iterrows():
-                    if st.button(f"• {row['규정명']}", key=f"reg_{row['규정명']}", use_container_width=True):
-                        st.session_state['view_reg'] = row['규정명']
-                        st.session_state['view_file'] = row['파일명']
+                    if st.button(row['규정명'], key=f"list_{row['규정명']}", use_container_width=True):
+                        st.session_state['active_reg'] = row['규정명']
+                        st.session_state['active_file'] = row['파일명']
 
-    with col_viewer:
-        if 'view_reg' in st.session_state:
-            st.markdown(f"<div style='border-bottom: 2px solid #111827; padding-bottom:10px; margin-bottom:20px;'><h3 style='margin:0;'>{st.session_state['view_reg']}</h3></div>", unsafe_allow_html=True)
-            # 본문 표시 (흰 종이 느낌)
-            st.text_area("DOCUMENT VIEWER", f"[{st.session_state['view_reg']}]의 본문 텍스트입니다.\n\n실제 데이터 구축 시 docs/{st.session_state['view_file']}의 내용이 출력됩니다.", height=750, label_visibility="collapsed")
+    with col_content:
+        if 'active_reg' in st.session_state:
+            st.markdown(f"<div style='border-bottom: 2px solid #000; padding-bottom:10px; margin-bottom:30px;'><h3 style='margin:0;'>{st.session_state['active_reg']}</h3></div>", unsafe_allow_html=True)
+            st.text_area("CONTENT", f"[{st.session_state['active_reg']}] 본문\n\n청암대학교 규정 관리 원칙에 의거하여 본 내용을 공시합니다.", height=800, label_visibility="collapsed")
         else:
-            st.markdown("<div style='height:600px; display:flex; align-items:center; justify-content:center; color:#9ca3af; border: 1px dashed #e5e7eb; border-radius:8px;'>왼쪽 목록에서 열람할 규정을 선택해 주십시오.</div>", unsafe_allow_html=True)
+            st.markdown("<div style='height:600px; display:flex; align-items:center; justify-content:center; color:#bfbfbf; border:1px solid #f0f0f0;'>좌측 리스트에서 규정을 선택하십시오.</div>", unsafe_allow_html=True)
 
-elif menu == "🧠 지능형 정책 검토":
-    st.markdown("<h2 style='font-weight:800; color:#111827;'>지능형 정책 검토</h2>", unsafe_allow_html=True)
-    st.write("대학 내 규정의 일관성을 유지하기 위해 개정안의 정책 정합성을 AI가 검토합니다.")
+elif main_menu == "규정 AI 검토":
+    st.markdown("<h2 style='font-weight:700; margin-bottom:20px;'>규정 AI 검토</h2>", unsafe_allow_html=True)
+    st.write("작성 중인 개정안이 대학 전체 규정 체계와 상충하는지 AI가 행정 검토를 수행합니다.")
     
-    st.markdown("<div style='background-color:#f9fafb; padding:2rem; border-radius:12px;'>", unsafe_allow_html=True)
-    draft_content = st.text_area("검토할 신규/개정 지침안 입력", height=300, placeholder="조항 형식으로 내용을 입력하시면 더 정확한 분석이 가능합니다.")
+    st.markdown("<br>", unsafe_allow_html=True)
+    draft = st.text_area("개정(안) 내용 입력", height=400, placeholder="검토가 필요한 지침이나 규정의 조항 내용을 상세히 입력하십시오.")
     
-    if st.button("🚀 정합성 분석 실행", use_container_width=True):
-        if draft_content:
-            with st.spinner("교내 규정 체계와의 모순점을 정밀 분석 중입니다..."):
-                prompt = f"대학 행정 전문가로서 다음 지침안이 청암대학교의 전체 규정(1~8편) 체계와 상충하는지 분석하라: \n\n {draft_content}"
-                # 실제 API 호출
-                st.markdown("<div class='analysis-report'>", unsafe_allow_html=True)
-                st.markdown("### 📋 분석 리포트")
-                st.write("AI가 분석한 결과: 본 개정안은 제 3편 교원인사 규정 제 12조와 일부 용어상 충돌 위험이 있으나, 전체적인 학칙 체계 내에서는 적합한 것으로 판단됩니다.")
-                st.markdown("</div>", unsafe_allow_html=True)
-    st.markdown("</div>", unsafe_allow_html=True)
+    if st.button("행정 정합성 분석 실행", use_container_width=True):
+        st.info("AI 행정 전문가 모듈이 분석을 시작합니다...")
+        # (기존 AI 로직 연결)
+
+# 사이드바 최하단 '관리자 메뉴' 선택 시
+if admin_nav == "관리자 메뉴":
+    # (관리자 페이지 로직 별도 구현)
+    pass
