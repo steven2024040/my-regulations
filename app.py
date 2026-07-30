@@ -2,7 +2,7 @@ import os
 import pandas as pd
 import streamlit as st
 
-# pypdf 안전 임포트 (설치 누락 시 앱 다운 방지)
+# pypdf 안전 임포트
 try:
   import pypdf
 
@@ -58,19 +58,21 @@ st.markdown(
 )
 
 
-# 3. 규정 데이터 및 PDF 로드 함수
+# 3. 규정 데이터 및 PDF 로드 함수 (유연한 텍스트 매칭 적용)
 @st.cache_data
 def load_regulations():
   pdf_filename = "청암대학교 규정집(20260709).pdf"
   full_text = ""
+  pages_content = []
 
   if PDF_AVAILABLE and os.path.exists(pdf_filename):
     try:
       reader = pypdf.PdfReader(pdf_filename)
-      for page in reader.pages:
+      for idx, page in enumerate(reader.pages):
         text = page.extract_text()
         if text:
           full_text += text + "\n"
+          pages_content.append((idx + 1, text))
     except Exception as e:
       full_text = ""
 
@@ -172,15 +174,24 @@ def load_regulations():
   contents = []
   for _, row in df.iterrows():
     title = row["규정명"]
-    if full_text and title in full_text:
-      start_idx = full_text.find(title)
-      extracted = full_text[start_idx : start_idx + 1500]
+    found_text = ""
+
+    # PDF 내에서 해당 규정명 또는 코드가 포함된 페이지 탐색
+    if full_text:
+      for page_num, page_text in pages_content:
+        if title in page_text or row["코드"] in page_text:
+          found_text += (
+              f"--- [PDF {page_num}페이지 발췌] ---\n" + page_text[:1200] + "\n\n"
+          )
+          break
+
+    if found_text:
       contents.append(
-          f"[{title}] PDF 원문 발췌\n\n" + extracted + "\n\n...(이하 생략)"
+          f"[{title}] (문서코드: {row['코드']})\n\n" + found_text
       )
     else:
       contents.append(
-          f"[{title}]\n\n업로드된 공식 규정집 PDF({row['코드']})에 수록된 원문입니다."
+          f"[{title}] (문서코드: {row['코드']})\n\n업로드된 공식 규정집 PDF 내에서 해당 명칭을 직접 매칭하지 못했습니다. (추후 AI 검색 엔진을 통해 전체 본문에서 정밀 검색되도록 고도화될 예정입니다.)"
       )
 
   df["원문"] = contents
@@ -246,7 +257,10 @@ if current_menu == "📚 전체 규정 조회 및 구조화 뷰":
         f" 검색 결과</p>",
         unsafe_allow_html=True,
     )
-    search_df = df[df["규정명"].str.contains(search_keyword, na=False)]
+    search_df = df[
+        df["규정명"].str.contains(search_keyword, na=False)
+        | df["편"].str.contains(search_keyword, na=False)
+    ]
 
     if search_df.empty:
       st.info("검색 결과가 없습니다.")
